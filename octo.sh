@@ -14,16 +14,36 @@ max_hotend_temp=260
 ProgramName=$(basename $0)
 
 octo__help() {
-    echo "Usage: $ProgramName <command> [option]\n"
+    echo "Usage: $ProgramName [command] <option>\n"
     echo "Commands:"
-    echo "    connect"
-    echo "    disconnect"
-    echo "    psu [on | off | toggle | status]"
-    echo "    gcode ['G-code Command' | help]"
-    echo "    job [start | cancel | resume | pause]"
-    echo "    bed [off | 'value in °C']"
-    echo "    hotend [off | 'value in °C']"
-    echo "    fan [off | <0-100>% | <0-255>]"
+    echo ""
+    echo "    -c, connect"
+    echo "         Connect to printer via serial port."
+    echo ""
+    echo "    -d, disconnect"
+    echo "         Disconnect from printer."
+    echo ""
+    echo "    -p, psu <on | off | toggle | reboot | status>"
+    echo "         Control PSU state."
+    echo "             Must have PSU Control plugin"
+    echo "             installed in Octoprint instance."
+    echo "         <reboot>: Turn PSU off, wait 5 seconds, turn PSU on."
+    echo ""
+    echo "    -g, gcode <'G-code Commands' | help>"
+    echo "         Send G-code commands (semicolon separated) to printer."
+    echo "         <help>: Display link to Marlin G-code documentation."
+    echo ""
+    echo "    -j, job <start | cancel | resume | pause | status>"
+    echo "         Control job state."
+    echo ""
+    echo "    -b, bed <off | 'value in °C'>"
+    echo "         Set heated bed temperature."
+    echo ""
+    echo "    -h, -t, hotend, tool <off | 'value in °C'>"
+    echo "         Set hotend/tool temperature."
+    echo ""
+    echo "    -f, fan <off | [0-100]% | [0-255]>"
+    echo "         Set cooling fan speed."
     echo ""
 }
 
@@ -103,11 +123,18 @@ octo__psu() {
             cmd="turnPSUOn" ;;
         "t" | "toggle")
             cmd="togglePSU" ;;
+        "r" | "reboot")
+            cmd="reboot" ;;
         *)
             cmd="getPSUState" ;;
     esac
 
-    if [[ "$cmd" != "getPSUState" ]]; then
+    if [[ "$cmd" == "reboot" ]]; then
+        post__request "turnPSUOff" "$url"
+        post__request "getPSUState" "$url"
+        sleep 5
+        post__request "turnPSUOn" "$url"
+    elif [[ "$cmd" != "getPSUState" ]]; then
         post__request "$cmd" "$url"
     fi
 
@@ -160,6 +187,10 @@ octo__hotend() {
         *)
             get__request "$url" ;;
     esac
+}
+
+octo__tool() {
+    octo__hotend $@
 }
 
 octo__fan() {
@@ -217,7 +248,7 @@ case $cmd in
         shift
         octo__bed $@
         ;;
-    "-h" | "--hotend")
+    "-h" | "-t" | "--hotend" | "--tool")
         shift
         octo__hotend $@
         ;;
