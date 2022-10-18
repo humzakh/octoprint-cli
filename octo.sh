@@ -3,7 +3,7 @@
 ### SERVER CONFIG ###
 #####################
 api_key="$OCTO_API_KEY"
-server_url="octopi.local"
+server_url="http://octopi.local"
 #####################
 ### PRINTER CONFIG ##
 #####################
@@ -51,7 +51,7 @@ get__request() {
 }
 
 octo__gcode() {
-    local url="http://$server_url/api/printer/command"
+    local url="$server_url/api/printer/command"
 
     case $(echo "$1" | tr '[:upper:]' '[:lower:]') in
         "")
@@ -72,7 +72,7 @@ octo__gcode() {
 }
 
 octo__job() {
-    local url="http://$server_url/api/job"
+    local url="$server_url/api/job"
 
     case $(echo "$1" | tr '[:upper:]' '[:lower:]') in
         "start" | "cancel" | "restart")
@@ -93,7 +93,7 @@ octo__job() {
 }
 
 octo__psu() {
-    local url="http://$server_url/api/plugin/psucontrol"
+    local url="$server_url/api/plugin/psucontrol"
 
     local cmd=""
     case $(echo "$1" | tr '[:upper:]' '[:lower:]') in
@@ -115,7 +115,7 @@ octo__psu() {
 }
 
 octo__connection() {
-    local url="http://$server_url/api/connection"
+    local url="$server_url/api/connection"
 
     case "$1" in
         "0")
@@ -128,7 +128,7 @@ octo__connection() {
 }
 
 octo__bed() {
-    local url="http://$server_url/api/printer/bed"
+    local url="$server_url/api/printer/bed"
     case "$1" in
         [0-9] | [0-9][0-9] | [0-9][0-9][0-9])
             if [ "$1" -le "$max_bed_temp" ]; then
@@ -145,7 +145,7 @@ octo__bed() {
 }
 
 octo__hotend() {
-    local url="http://$server_url/api/printer/tool"
+    local url="$server_url/api/printer/tool"
 
     case "$1" in
         [0-9] | [0-9][0-9] | [0-9][0-9][0-9])
