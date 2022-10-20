@@ -33,6 +33,7 @@ octo__help() {
   echo "         Manage PSU state."
   echo "             Must have PSU Control plugin installed"
   echo "             & configured in your Octoprint instance."
+  echo "               https://plugins.octoprint.org/plugins/psucontrol"
   echo "         <reboot>: Turns PSU off, waits 5 seconds, turns PSU on."
   echo ""
   echo "    -g, --gcode <'G-code Commands' | help>"
