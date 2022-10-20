@@ -287,7 +287,7 @@ octo__file() {
       fi
       ;;
     *)
-      echo "Error: Invalid argument."
+      echo "Error: Missing argument. <select | unselect>"
       exit 1
       ;;
   esac
