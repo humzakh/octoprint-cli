@@ -153,12 +153,14 @@ octo__gcode() {
     "help")
       echo "https://marlinfw.org/meta/gcode/" ;;
     *)
+      local old_IFS="$IFS"
       while IFS=';' read -ra ADDR; do
         for addr in "${ADDR[@]}"; do
           local cmd=$(echo "$addr" | tr '[:lower:]' '[:upper:]')
           post__request "$cmd" "$url"
         done
       done <<< "$1"
+      IFS="$old_IFS"
       ;;
   esac
 }
@@ -367,7 +369,7 @@ octo__fan() {
 }
 
 cmd="$1"
-case $cmd in
+case "$cmd" in
   "" | "-h" | "--help")
     octo__help ;;
   "-g" | "--gcode")
