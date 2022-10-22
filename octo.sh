@@ -273,7 +273,7 @@ octo__file() {
         case `select_opt "${filenames[@]}"` in
           *)
             local file="${filenames[$?]}"
-            echo "Selected: $file"
+            echo "Selecting: $file"
             file="$(sed -e's/^"//' -e 's/"$//' -e 's/ /%20/g' <<< "$file")"
             if [[ "$(octo__connection | jq '.current.state')" == "\"Operational\"" ]]; then
               post__request "select" "$url/local/$file"
