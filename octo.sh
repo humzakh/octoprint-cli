@@ -206,7 +206,7 @@ octo__psu() {
   elif [[ "$cmd" != "getPSUState" ]]; then
     post__request "$cmd" "$url"
   fi
-
+  echo "Retrieving PSU status..."
   post__request "getPSUState" "$url"
 }
 
@@ -223,6 +223,7 @@ octo__connection() {
       ;;
     *);;
   esac
+  echo "Retrieving connection status..."
   get__request "$url"
 }
 
