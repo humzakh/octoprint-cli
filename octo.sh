@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #####################
 ### SERVER CONFIG ###
 #####################
@@ -181,9 +181,9 @@ octo__job() {
       esac
       post__request "pause\", \"action\":\"$action" "$url"
       ;;
-    *)
-      ;;
+    *);;
   esac
+  echo "Retrieving job status..."
   get__request "$url"
 }
 
@@ -213,9 +213,15 @@ octo__psu() {
 octo__connection() {
   local url="$server_url/api/connection"
   case "$1" in
-    "0") post__request "disconnect" "$url" ;;
-    "1") post__request "connect" "$url" ;;
-    *)   ;;
+    "0")
+      echo "Disconnecting from printer..."
+      post__request "disconnect" "$url"
+      ;;
+    "1")
+      echo "Connecting to printer..."
+      post__request "connect" "$url"
+      ;;
+    *);;
   esac
   get__request "$url"
 }
@@ -235,7 +241,7 @@ octo__file() {
   }
 
   case "$(echo "$1" | tr '[:upper:]' '[:lower:]')" in
-    "-u" | "unselect")
+    "-u" | "u" | "unselect")
       if [[ "$(octo__connection | jq '.current.state')" == "\"Operational\"" ]]; then
         local origin file
         read origin file <<< $(octo__job \
@@ -247,7 +253,7 @@ octo__file() {
             echo "Unselected: $file"
           else
             echo "Error unselecting file."
-            exit 1
+            exit 2
           fi
         else
           echo "No file is currently selected."
@@ -257,7 +263,7 @@ octo__file() {
         exit 1
       fi
       ;;
-    "-s" | "select")
+    "-s" | "s" | "select")
       request_files "$url/local"
 
       if [[ ! $json ]]; then
@@ -287,8 +293,16 @@ octo__file() {
         esac
       fi
       ;;
+    "")
+      echo "Error: Missing argument."
+      echo "Usage:"
+      echo "      $ProgramName --files <select | unselect>"
+      exit 1
+      ;;
     *)
-      echo "Error: Missing argument. <select | unselect>"
+      echo "Error: Invalid argument."
+      echo "Usage:"
+      echo "      $ProgramName --files <select | unselect>"
       exit 1
       ;;
   esac
@@ -299,19 +313,28 @@ octo__bed() {
   case "$1" in
     [0-9] | [0-9][0-9] | [0-9][0-9][0-9])
       if [ "$1" -le "$max_bed_temp" ]; then
+        echo "Setting bed temperature to $1 °C..."
         octo__gcode "M140 S$1"
         sleep 0.5
       else
-        echo "Error: Value too high. Max bed temp: $max_bed_temp"
+        echo "Error: Value too high. Max bed temperature: $max_bed_temp °C"
         exit 1
       fi
       ;;
     "off" | "cool" | "cooldown")
+      echo "Setting bed temperature to 0 °C..."
       octo__gcode "M140 S0"
       sleep 0.5
       ;;
-    *);;
+    "" | "status") ;;
+    *)
+      echo "Error: Invalid argument."
+      echo "Usage:"
+      echo "      $ProgramName --bed <off | 'value in °C' | status>"
+      exit 1
+      ;;
   esac
+  echo "Retrieving bed status..."
   get__request "$url"
 }
 
@@ -320,30 +343,42 @@ octo__tool() {
   case "$1" in
     [0-9] | [0-9][0-9] | [0-9][0-9][0-9])
       if [ "$1" -le "$max_hotend_temp" ]; then
+        echo "Setting tool temperature to $1 °C..."
         octo__gcode "M104 S$1"
         sleep 0.5
       else
-        echo "Error: Value too high. Max hotend temp: $max_hotend_temp"
+        echo "Error: Value too high. Max tool temperature: $max_hotend_temp °C"
         exit 1
       fi
       ;;
     "off" | "cool" | "cooldown")
+      echo "Setting tool temperature to 0 °C..."
       octo__gcode "M104 S0"
       sleep 0.5
       ;;
-    *);;
+    "" | "status") ;;
+    *)
+      echo "Error: Invalid argument."
+      echo "Usage:"
+      echo "      $ProgramName --tool <off | 'value in °C' | status>"
+      exit 1
+      ;;
   esac
+  echo "Retrieving tool status..."
   get__request "$url"
 }
 
 octo__fan() {
   case "$1" in
     "")
-      echo "Error: Missing argument. <0-255> or <0-100>%"
+      echo "Error: Missing argument."
+      echo "Usage:"
+      echo "      $ProgramName --fan <off | '0-255' | '0-100'%>"
       exit 1
       ;;
     [0-9] | [0-9][0-9] | [0-9][0-9][0-9])
       if [ "$1" -le 255 ]; then
+        echo "Setting fan speed to $1..."
         octo__gcode "M106 S$1"
       else
         echo "Error: Value too high. Max fan speed: 255"
@@ -351,19 +386,26 @@ octo__fan() {
       fi
       ;;
     [0-9]% | [0-9][0-9]% | [0-9][0-9][0-9]%)
-      percentage=${1%\%}
+      local percentage=${1%\%}
       if [ "$percentage" -le 100 ] && [ "$percentage" -ge 0 ]; then
-        val=$(( 255*percentage/100 ))
+        local val=$(( 255*percentage/100 ))
+        echo "Setting fan speed to $1..."
         octo__gcode "M106 S$val"
       else
         echo "Error: Invalid argument."
+        echo "Usage:"
+        echo "      $ProgramName --fan <'0-100'%>"
         exit 1
       fi
       ;;
     "off")
-      octo__gcode "M106 S0" ;;
+      echo "Setting fan speed to 0%..."
+      octo__gcode "M106 S0"
+      ;;
     *)
       echo "Error: Invalid argument."
+      echo "Usage:"
+      echo "      $ProgramName --fan <off | '0-255' | '0-100'%>"
       exit 1
       ;;
   esac
