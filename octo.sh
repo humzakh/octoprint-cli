@@ -46,10 +46,10 @@ octo__help() {
   echo "    -F, --file <select | unselect>"
   echo "         Select/unselect file for printing from local storage."
   echo ""
-  echo "    -b, --bed <off | 'value in °C' | status>"
+  echo "    -b, --bed <off | [value in °C] | status>"
   echo "         Set heated bed temperature."
   echo ""
-  echo "    -t, --tool, --hotend <off | 'value in °C' | status>"
+  echo "    -t, --tool, --hotend <off | [value in °C] | status>"
   echo "         Set tool/hotend temperature."
   echo ""
   echo "    -f, --fan <off | [0-100]% | [0-255]>"
@@ -330,7 +330,7 @@ octo__bed() {
     *)
       echo "Error: Invalid argument."
       echo "Usage:"
-      echo "      $ProgramName --bed <off | 'value in °C' | status>"
+      echo "      $ProgramName --bed <off | [value in °C] | status>"
       exit 1
       ;;
   esac
@@ -360,7 +360,7 @@ octo__tool() {
     *)
       echo "Error: Invalid argument."
       echo "Usage:"
-      echo "      $ProgramName --tool <off | 'value in °C' | status>"
+      echo "      $ProgramName --tool <off | [value in °C] | status>"
       exit 1
       ;;
   esac
@@ -373,7 +373,7 @@ octo__fan() {
     "")
       echo "Error: Missing argument."
       echo "Usage:"
-      echo "      $ProgramName --fan <off | '0-255' | '0-100'%>"
+      echo "      $ProgramName --fan <off | [0-100]% | [0-255]>"
       exit 1
       ;;
     [0-9] | [0-9][0-9] | [0-9][0-9][0-9])
