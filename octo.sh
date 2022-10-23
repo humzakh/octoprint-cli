@@ -174,16 +174,14 @@ octo__job() {
     "pause")
       local action=$(echo "$2" | tr '[:upper:]' '[:lower:]')
       case $action in
-        "resume" | "toggle")
-          ;;
-        *)
-          action="pause" ;;
+        "resume" | "toggle") ;;
+        *)    action="pause" ;;
       esac
       post__request "pause\", \"action\":\"$action" "$url"
       ;;
     *);;
   esac
-  echo "Retrieving job status..."
+  >&2 echo "Retrieving job status..."
   get__request "$url"
 }
 
@@ -191,22 +189,24 @@ octo__psu() {
   local url="$server_url/api/plugin/psucontrol"
   local cmd=""
   case $(echo "$1" | tr '[:upper:]' '[:lower:]') in
-    "0" | "off")    cmd="turnPSUOff" ;;
-    "1" | "on")     cmd="turnPSUOn" ;;
-    "t" | "toggle") cmd="togglePSU" ;;
+    "0" | "off")    cmd="turnPSUOff"; echo "Turning PSU off..." ;;
+    "1" | "on")     cmd="turnPSUOn";  echo "Turning PSU on..." ;;
+    "t" | "toggle") cmd="togglePSU";  echo "Toggling PSU..." ;;
     "r" | "reboot") cmd="reboot" ;;
     *)              cmd="getPSUState" ;;
   esac
 
   if [[ "$cmd" == "reboot" ]]; then
+    echo "Turning PSU off..."
     post__request "turnPSUOff" "$url"
     post__request "getPSUState" "$url"
     sleep 5
+    echo "Turning PSU on..."
     post__request "turnPSUOn" "$url"
   elif [[ "$cmd" != "getPSUState" ]]; then
     post__request "$cmd" "$url"
   fi
-  echo "Retrieving PSU status..."
+  >&2 echo "Retrieving PSU status..."
   post__request "getPSUState" "$url"
 }
 
@@ -223,7 +223,7 @@ octo__connection() {
       ;;
     *);;
   esac
-  echo "Retrieving connection status..."
+  >&2 echo "Retrieving connection status..."
   get__request "$url"
 }
 
@@ -243,14 +243,14 @@ octo__file() {
 
   case "$(echo "$1" | tr '[:upper:]' '[:lower:]')" in
     "-u" | "u" | "unselect")
-      if [[ "$(octo__connection | jq '.current.state')" == "\"Operational\"" ]]; then
+      if [[ "$(octo__connection 2>/dev/null | jq '.current.state')" == "\"Operational\"" ]]; then
         local origin file
-        read origin file <<< $(octo__job \
+        read origin file <<< $(octo__job 2>/dev/null \
                                | jq '.job.file.origin, .job.file.name' \
                                | sed -e's/^"//' -e 's/"$//' -e 's/ /%20/g')
         if [[ "$origin" != "null" ]]; then
           post__request "unselect" "$url/$origin/$file"
-          if [[ "$(octo__job | jq '.job.file.name')" == "null" ]]; then
+          if [[ "$(octo__job 2>/dev/null | jq '.job.file.name')" == "null" ]]; then
             echo "Unselected: $file"
           else
             echo "Error unselecting file."
@@ -282,13 +282,13 @@ octo__file() {
             local file="${filenames[$?]}"
             echo "Selecting: $file"
             file="$(sed -e's/^"//' -e 's/"$//' -e 's/ /%20/g' <<< "$file")"
-            if [[ "$(octo__connection | jq '.current.state')" == "\"Operational\"" ]]; then
+            if [[ "$(octo__connection 2>/dev/null | jq '.current.state')" == "\"Operational\"" ]]; then
               post__request "select" "$url/local/$file"
               sleep 0.5
-              octo__job
+              octo__job 2>/dev/null
             else
               echo "Error: Printer not operational."
-              exit 1
+              exit 3
             fi
             ;;
         esac
