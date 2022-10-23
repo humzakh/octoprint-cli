@@ -395,7 +395,7 @@ octo__fan() {
       else
         echo "Error: Invalid argument."
         echo "Usage:"
-        echo "      $ProgramName --fan <'0-100'%>"
+        echo "      $ProgramName --fan <[0-100]%>"
         exit 1
       fi
       ;;
@@ -406,7 +406,7 @@ octo__fan() {
     *)
       echo "Error: Invalid argument."
       echo "Usage:"
-      echo "      $ProgramName --fan <off | '0-255' | '0-100'%>"
+      echo "      $ProgramName --fan <off | [0-100]% | [0-255]>"
       exit 1
       ;;
   esac
