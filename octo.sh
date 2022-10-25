@@ -244,14 +244,15 @@ octo__file() {
   case "$(echo "$1" | tr '[:upper:]' '[:lower:]')" in
     "-u" | "u" | "unselect")
       if [[ "$(octo__connection 2>/dev/null | jq '.current.state')" == "\"Operational\"" ]]; then
+        local json=$(octo__job 2>/dev/null)
         local origin file
-        read origin file <<< $(octo__job 2>/dev/null \
+        read -d '\r' origin file <<< $(octo__job 2>/dev/null \
                                | jq '.job.file.origin, .job.file.name' \
-                               | sed -e's/^"//' -e 's/"$//' -e 's/ /%20/g')
+                               | sed -e 's/^"//' -e 's/"$//' -e 's/ /%20/g')
         if [[ "$origin" != "null" ]]; then
           post__request "unselect" "$url/$origin/$file"
           if [[ "$(octo__job 2>/dev/null | jq '.job.file.name')" == "null" ]]; then
-            echo "Unselected: $file"
+            echo "Unselected: \"$(sed -e 's/%20/ /g' <<< "$file")\""
           else
             echo "Error unselecting file."
             exit 2
@@ -281,7 +282,7 @@ octo__file() {
           *)
             local file="${filenames[$?]}"
             echo "Selecting: $file"
-            file="$(sed -e's/^"//' -e 's/"$//' -e 's/ /%20/g' <<< "$file")"
+            file="$(sed -e 's/^"//' -e 's/"$//' -e 's/ /%20/g' <<< "$file")"
             if [[ "$(octo__connection 2>/dev/null | jq '.current.state')" == "\"Operational\"" ]]; then
               post__request "select" "$url/local/$file"
               sleep 0.5
