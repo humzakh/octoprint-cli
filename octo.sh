@@ -259,7 +259,7 @@ octo__file() {
           echo "No file is currently selected."
         fi
       else
-        echo "Error: Printer not operational."
+        echo "Error: Printer is not operational."
         exit 1
       fi
       ;;
@@ -286,7 +286,7 @@ octo__file() {
               sleep 0.5
               octo__job 2>/dev/null
             else
-              echo "Error: Printer not operational."
+              echo "Error: Printer is not operational."
               exit 3
             fi
             ;;
