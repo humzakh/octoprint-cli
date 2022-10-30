@@ -59,25 +59,34 @@ octo__help() {
 
 post__request() {
   if [[ "$#" == 2 ]]; then
-    curl --silent --show-error \
-         --header "Content-Type: application/json" \
-         --header "X-Api-Key: $api_key" \
-         --request POST \
-         --data "{\"command\":\"$1\"}" \
-         --url "$2" \
-        | jq
+    response=$(curl --silent --show-error \
+                    --header "Content-Type: application/json" \
+                    --header "X-Api-Key: $api_key" \
+                    --request POST \
+                    --data "{\"command\":\"$1\"}" \
+                    --url "$2" \
+              2>&1)
+    return_value=$?
+    if [ $return_value -ne 0 ]; then
+      echo ""
+      echo "$response"
+      exit $return_value
+    fi
+
+    if [ ! -z "$response" ]; then
+      echo ""
+      echo "$response" | jq
+    fi
   fi
 }
 
 get__request() {
-  echo ""
   curl --silent --show-error \
        --header "Content-Type: application/json" \
        --header "X-Api-Key: $api_key" \
        --request GET \
        --url "$1" \
       | jq
-  echo ""
 }
 
 # arrowkey selection menu from: https://unix.stackexchange.com/a/415155
@@ -189,24 +198,32 @@ octo__psu() {
   local url="$server_url/api/plugin/psucontrol"
   local cmd=""
   case $(echo "$1" | tr '[:upper:]' '[:lower:]') in
-    "0" | "off")    cmd="turnPSUOff"; echo "Turning PSU off..." ;;
-    "1" | "on")     cmd="turnPSUOn";  echo "Turning PSU on..." ;;
-    "t" | "toggle") cmd="togglePSU";  echo "Toggling PSU..." ;;
+    "0" | "off")    cmd="turnPSUOff"; echo -n "Turning PSU off..." ;;
+    "1" | "on")     cmd="turnPSUOn";  echo -n "Turning PSU on..." ;;
+    "t" | "toggle") cmd="togglePSU";  echo -n "Toggling PSU..." ;;
     "r" | "reboot") cmd="reboot" ;;
     *)              cmd="getPSUState" ;;
   esac
 
   if [[ "$cmd" == "reboot" ]]; then
-    echo "Turning PSU off..."
+    echo -n "Turning PSU off..."
     post__request "turnPSUOff" "$url"
+    echo "done"
+    echo -n "Retrieving PSU status..."
+    sleep 0.5
     post__request "getPSUState" "$url"
     sleep 5
-    echo "Turning PSU on..."
+    echo -n "Turning PSU on..."
+    sleep 0.5
     post__request "turnPSUOn" "$url"
+    echo "done"
+    sleep 0.5
   elif [[ "$cmd" != "getPSUState" ]]; then
     post__request "$cmd" "$url"
+    echo "done"
   fi
-  >&2 echo "Retrieving PSU status..."
+  >&2 echo -n "Retrieving PSU status..."
+  sleep 0.5
   post__request "getPSUState" "$url"
 }
 
@@ -214,16 +231,19 @@ octo__connection() {
   local url="$server_url/api/connection"
   case "$1" in
     "0")
-      echo "Disconnecting from printer..."
+      echo -n "Disconnecting from printer..."
       post__request "disconnect" "$url"
+      echo "done"
       ;;
     "1")
-      echo "Connecting to printer..."
+      echo -n "Connecting to printer..."
       post__request "connect" "$url"
+      echo "done"
       ;;
     *);;
   esac
   >&2 echo "Retrieving connection status..."
+  sleep 0.5
   get__request "$url"
 }
 
@@ -248,10 +268,14 @@ octo__file() {
                                       | jq '.job.file.origin, .job.file.name' \
                                       | sed -e 's/^"//' -e 's/"$//' -e 's/ /%20/g')"
         if [[ "$origin" != "null" ]]; then
+          echo -n "Unselecting: \"$(sed -e 's/%20/ /g' <<< "$file")\"..."
+          sleep 0.5
           post__request "unselect" "$url/$origin/$file"
+          if [ $? -ne 0 ]; then exit $?; fi
           if [[ "$(octo__job 2>/dev/null | jq '.job.file.name')" == "null" ]]; then
-            echo "Unselected: \"$(sed -e 's/%20/ /g' <<< "$file")\""
+            echo "done"
           else
+            echo ""
             echo "Error unselecting file."
             exit 2
           fi
@@ -265,10 +289,11 @@ octo__file() {
       ;;
     "-s" | "s" | "select")
       request_files "$url/local"
+      if [ $? -ne 0 ]; then exit $?; fi
 
       if [[ ! $json ]]; then
         echo "No files returned."
-        exit 1
+        exit 2
       else
         echo ""
         echo "Select a file using up/down arrow keys, then press Enter:"
@@ -279,13 +304,16 @@ octo__file() {
         case `select_opt "${filenames[@]}"` in
           *)
             local file="${filenames[$?]}"
-            echo "Selecting: $file"
+            echo -n "Selecting: $file..."
+            sleep 0.5
             file="$(sed -e 's/^"//' -e 's/"$//' -e 's/ /%20/g' <<< "$file")"
             if [[ "$(octo__connection 2>/dev/null | jq '.current.state')" == "\"Operational\"" ]]; then
               post__request "select" "$url/local/$file"
+              echo "done"
               sleep 0.5
               octo__job 2>/dev/null
             else
+              echo ""
               echo "Error: Printer is not operational."
               exit 3
             fi
@@ -313,18 +341,18 @@ octo__bed() {
   case "$1" in
     [0-9] | [0-9][0-9] | [0-9][0-9][0-9])
       if [ "$1" -le "$max_bed_temp" ]; then
-        echo "Setting bed temperature to $1 °C..."
+        echo -n "Setting bed temperature to $1 °C..."
         octo__gcode "M140 S$1"
-        sleep 0.5
+        echo "done"
       else
         echo "Error: Value too high. Max bed temperature: $max_bed_temp °C"
         exit 1
       fi
       ;;
     "off" | "cool" | "cooldown")
-      echo "Setting bed temperature to 0 °C..."
+      echo -n "Setting bed temperature to 0 °C..."
       octo__gcode "M140 S0"
-      sleep 0.5
+      echo "done"
       ;;
     "" | "status") ;;
     *)
@@ -335,6 +363,7 @@ octo__bed() {
       ;;
   esac
   echo "Retrieving bed status..."
+  sleep 0.5
   get__request "$url"
 }
 
@@ -343,18 +372,18 @@ octo__tool() {
   case "$1" in
     [0-9] | [0-9][0-9] | [0-9][0-9][0-9])
       if [ "$1" -le "$max_hotend_temp" ]; then
-        echo "Setting tool temperature to $1 °C..."
+        echo -n "Setting tool temperature to $1 °C..."
         octo__gcode "M104 S$1"
-        sleep 0.5
+        echo "done"
       else
         echo "Error: Value too high. Max tool temperature: $max_hotend_temp °C"
         exit 1
       fi
       ;;
     "off" | "cool" | "cooldown")
-      echo "Setting tool temperature to 0 °C..."
+      echo -n "Setting tool temperature to 0 °C..."
       octo__gcode "M104 S0"
-      sleep 0.5
+      echo "done"
       ;;
     "" | "status") ;;
     *)
@@ -365,6 +394,7 @@ octo__tool() {
       ;;
   esac
   echo "Retrieving tool status..."
+  sleep 0.5
   get__request "$url"
 }
 
@@ -378,8 +408,10 @@ octo__fan() {
       ;;
     [0-9] | [0-9][0-9] | [0-9][0-9][0-9])
       if [ "$1" -le 255 ]; then
-        echo "Setting fan speed to $1..."
+        echo -n "Setting fan speed to $1..."
+        sleep 0.5
         octo__gcode "M106 S$1"
+        echo "done"
       else
         echo "Error: Value too high. Max fan speed: 255"
         exit 1
@@ -389,8 +421,10 @@ octo__fan() {
       local percentage=${1%\%}
       if [ "$percentage" -le 100 ] && [ "$percentage" -ge 0 ]; then
         local val=$(( 255*percentage/100 ))
-        echo "Setting fan speed to $1..."
+        echo -n "Setting fan speed to $1..."
+        sleep 0.5
         octo__gcode "M106 S$val"
+        echo "done"
       else
         echo "Error: Invalid argument."
         echo "Usage:"
@@ -399,8 +433,10 @@ octo__fan() {
       fi
       ;;
     "off")
-      echo "Setting fan speed to 0%..."
+      echo -n "Setting fan speed to 0%..."
+      sleep 0.5
       octo__gcode "M106 S0"
+      echo "done"
       ;;
     *)
       echo "Error: Invalid argument."
