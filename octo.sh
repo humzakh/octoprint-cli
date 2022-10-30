@@ -14,7 +14,8 @@ max_hotend_temp=260
 ProgramName=$(basename $0)
 
 octo__help() {
-  echo "Usage: $ProgramName [command] <option>\n"
+  echo "Usage: $ProgramName [command] <option>"
+  echo ""
   echo "Commands:"
   echo ""
   echo "    -h, --help"
