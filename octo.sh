@@ -67,6 +67,7 @@ post__request() {
                     --data "{\"command\":\"$1\"}" \
                     --url "$2" \
               2>&1)
+
     return_value=$?
     if [ $return_value -ne 0 ]; then
       echo ""
@@ -156,7 +157,7 @@ select_opt() {
 
 octo__gcode() {
   local url="$server_url/api/printer/command"
-  case $(echo "$1" | tr '[:upper:]' '[:lower:]') in
+  case $(tr '[:upper:]' '[:lower:]' <<< "$1") in
     "")
       echo "https://marlinfw.org/meta/gcode/"
       post__request "M300" "$url"
@@ -165,10 +166,12 @@ octo__gcode() {
       echo "https://marlinfw.org/meta/gcode/" ;;
     *)
       local old_IFS="$IFS"
-      while IFS=';' read -ra ADDR; do
+      while IFS=';\n\r' read -ra ADDR; do
         for addr in "${ADDR[@]}"; do
-          local cmd=$(echo "$addr" | tr '[:lower:]' '[:upper:]')
+          local cmd=$(echo "$addr" | sed -e 's/^ *//' -e 's/ *$//' | tr '[:lower:]' '[:upper:]')
+          echo -n "Sending \"$cmd\"..."
           post__request "$cmd" "$url"
+          echo "done"
         done
       done <<< "$1"
       IFS="$old_IFS"
@@ -178,11 +181,11 @@ octo__gcode() {
 
 octo__job() {
   local url="$server_url/api/job"
-  case $(echo "$1" | tr '[:upper:]' '[:lower:]') in
+  case $(tr '[:upper:]' '[:lower:]' <<< "$1") in
     "start" | "cancel" | "restart")
-      post__request $(echo "$1" | tr '[:upper:]' '[:lower:]') "$url" ;;
+      post__request $(tr '[:upper:]' '[:lower:]' <<< "$1") "$url" ;;
     "pause")
-      local action=$(echo "$2" | tr '[:upper:]' '[:lower:]')
+      local action=$(tr '[:upper:]' '[:lower:]' <<< "$2")
       case $action in
         "resume" | "toggle") ;;
         *)    action="pause" ;;
@@ -454,7 +457,7 @@ case "$cmd" in
     octo__help ;;
   "-g" | "--gcode")
     shift
-    octo__gcode $@
+    octo__gcode "$@"
     ;;
   "-j" | "--job")
     shift
