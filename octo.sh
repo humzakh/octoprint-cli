@@ -59,7 +59,7 @@ octo__help() {
 }
 
 post__request() {
-  if [[ "$#" == 2 ]]; then
+  if [[ $# == 2 ]]; then
     response=$(curl --silent --show-error \
                     --header "Content-Type: application/json" \
                     --header "X-Api-Key: $api_key" \
@@ -165,7 +165,7 @@ octo__gcode() {
     "help")
       echo "https://marlinfw.org/meta/gcode/" ;;
     "__octo__")
-      post__request "$2" "$url" ;;
+      if [[ $# == 2 ]]; then post__request "$2" "$url"; fi ;;
     *)
       local old_IFS="$IFS"
       while IFS=';\n\r' read -ra ADDR; do
