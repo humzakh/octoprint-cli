@@ -164,6 +164,8 @@ octo__gcode() {
       ;;
     "help")
       echo "https://marlinfw.org/meta/gcode/" ;;
+    "__octo__")
+      post__request "$2" "$url" ;;
     *)
       local old_IFS="$IFS"
       while IFS=';\n\r' read -ra ADDR; do
@@ -225,6 +227,7 @@ octo__psu() {
   elif [[ "$cmd" != "getPSUState" ]]; then
     post__request "$cmd" "$url"
     echo "done"
+    sleep 0.5
   fi
   >&2 echo -n "Retrieving PSU status..."
   sleep 0.5
@@ -346,7 +349,7 @@ octo__bed() {
     [0-9] | [0-9][0-9] | [0-9][0-9][0-9])
       if [ "$1" -le "$max_bed_temp" ]; then
         echo -n "Setting bed temperature to $1 °C..."
-        octo__gcode "M140 S$1"
+        octo__gcode "__octo__" "M140 S$1"
         echo "done"
       else
         echo "Error: Value too high. Max bed temperature: $max_bed_temp °C"
@@ -355,7 +358,7 @@ octo__bed() {
       ;;
     "off" | "cool" | "cooldown")
       echo -n "Setting bed temperature to 0 °C..."
-      octo__gcode "M140 S0"
+      octo__gcode "__octo__" "M140 S0"
       echo "done"
       ;;
     "" | "status") ;;
@@ -377,7 +380,7 @@ octo__tool() {
     [0-9] | [0-9][0-9] | [0-9][0-9][0-9])
       if [ "$1" -le "$max_hotend_temp" ]; then
         echo -n "Setting tool temperature to $1 °C..."
-        octo__gcode "M104 S$1"
+        octo__gcode "__octo__" "M104 S$1"
         echo "done"
       else
         echo "Error: Value too high. Max tool temperature: $max_hotend_temp °C"
@@ -386,7 +389,7 @@ octo__tool() {
       ;;
     "off" | "cool" | "cooldown")
       echo -n "Setting tool temperature to 0 °C..."
-      octo__gcode "M104 S0"
+      octo__gcode "__octo__" "M104 S0"
       echo "done"
       ;;
     "" | "status") ;;
@@ -414,7 +417,7 @@ octo__fan() {
       if [ "$1" -le 255 ]; then
         echo -n "Setting fan speed to $1..."
         sleep 0.5
-        octo__gcode "M106 S$1"
+        octo__gcode "__octo__" "M106 S$1"
         echo "done"
       else
         echo "Error: Value too high. Max fan speed: 255"
@@ -427,7 +430,7 @@ octo__fan() {
         local val=$(( 255*percentage/100 ))
         echo -n "Setting fan speed to $1..."
         sleep 0.5
-        octo__gcode "M106 S$val"
+        octo__gcode "__octo__" "M106 S$val"
         echo "done"
       else
         echo "Error: Invalid argument."
@@ -439,7 +442,7 @@ octo__fan() {
     "off")
       echo -n "Setting fan speed to 0%..."
       sleep 0.5
-      octo__gcode "M106 S0"
+      octo__gcode "__octo__" "M106 S0"
       echo "done"
       ;;
     *)
