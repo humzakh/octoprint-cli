@@ -8,7 +8,13 @@ api_key="$OCTO_API_KEY"
 ### PRINTER CONFIG ##
 #####################
 max_bed_temp=140
-max_hotend_temp=260
+max_tool_temp=260
+#####################
+## PREHEAT PROFILES #
+#####################
+preheat_template='{"bed": "xx", "tool": "xxx"}'
+preheat_pla='{"bed": "60", "tool": "180"}'
+preheat_petg='{"bed": "80", "tool": "210"}'
 #####################
 #####################
 ProgramName=$(basename $0)
@@ -41,11 +47,26 @@ octo__help() {
   echo "         Send G-code commands (semicolon separated) to printer."
   echo "         <help>: Display link to Marlin G-code documentation."
   echo ""
-  echo "    -j, --job <start | cancel | resume | pause | status>"
-  echo "         Manage job state."
+  echo "    -s, --select"
+  echo "         Select a file for printing from local storage."
   echo ""
-  echo "    -F, --file <select | unselect>"
-  echo "         Select/unselect file for printing from local storage."
+  echo "    -u, --unselect"
+  echo "         Uneselect currently selected file."
+  echo ""
+  echo "    -j, --job"
+  echo "         View current job status."
+  echo ""
+  echo "    -S, --start"
+  echo "         Start print job."
+  echo ""
+  echo "    -C, --cancel, --abort"
+  echo "         Abort running print job."
+  echo ""
+  echo "    -P, --pause"
+  echo "         Pause running print job."
+  echo ""
+  echo "    -R, --resume"
+  echo "         Resume paused print job."
   echo ""
   echo "    -b, --bed <off | [value in °C] | status>"
   echo "         Set heated bed temperature."
@@ -55,6 +76,14 @@ octo__help() {
   echo ""
   echo "    -f, --fan <off | [0-100]% | [0-255]>"
   echo "         Set cooling fan speed."
+  echo ""
+  echo "    -ph, --preheat <'profile name'>"
+  echo "         Preheat bed/tool using values in the given preheat profile."
+  echo "            Example:"
+  echo "              Profile \"petg\" is declared at top of script as:"
+  echo "                preheat_petg='{\"bed\": \"80\", \"tool\": \"210\"}'"
+  echo "              Enter command:"
+  echo "                $ProgramName --preheat petg"
   echo ""
 }
 
@@ -165,7 +194,17 @@ octo__gcode() {
     "help")
       echo "https://marlinfw.org/meta/gcode/" ;;
     "__octo__")
-      if [[ $# == 2 ]]; then post__request "$2" "$url"; fi ;;
+      if [[ $# == 2 ]]; then
+        local old_IFS="$IFS"
+        while IFS=';\n\r' read -ra ADDR; do
+          for addr in "${ADDR[@]}"; do
+            local cmd=$(echo "$addr" | sed -e 's/^ *//' -e 's/ *$//' | tr '[:lower:]' '[:upper:]')
+            post__request "$cmd" "$url"
+          done
+        done <<< "$2"
+        IFS="$old_IFS"
+      fi
+      ;;
     *)
       local old_IFS="$IFS"
       while IFS=';\n\r' read -ra ADDR; do
@@ -269,7 +308,7 @@ octo__file() {
   }
 
   case "$(echo "$1" | tr '[:upper:]' '[:lower:]')" in
-    "-u" | "u" | "unselect")
+    "-u" | "unselect")
       if [[ "$(octo__connection 2>/dev/null | jq '.current.state')" == "\"Operational\"" ]]; then
         read -d '\r' origin file <<< "$(octo__job 2>/dev/null \
                                       | jq '.job.file.origin, .job.file.name' \
@@ -294,7 +333,7 @@ octo__file() {
         exit 1
       fi
       ;;
-    "-s" | "s" | "select")
+    "-s" | "select")
       request_files "$url/local"
       if [ $? -ne 0 ]; then exit $?; fi
 
@@ -369,6 +408,7 @@ octo__bed() {
       exit 1
       ;;
   esac
+  sleep 0.5
   echo "Retrieving bed status..."
   sleep 0.5
   get__request "$url"
@@ -378,12 +418,12 @@ octo__tool() {
   local url="$server_url/api/printer/tool"
   case "$1" in
     [0-9] | [0-9][0-9] | [0-9][0-9][0-9])
-      if [ "$1" -le "$max_hotend_temp" ]; then
+      if [ "$1" -le "$max_tool_temp" ]; then
         echo -n "Setting tool temperature to $1 °C..."
         octo__gcode "__octo__" "M104 S$1"
         echo "done"
       else
-        echo "Error: Value too high. Max tool temperature: $max_hotend_temp °C"
+        echo "Error: Value too high. Max tool temperature: $max_tool_temp °C"
         exit 1
       fi
       ;;
@@ -400,6 +440,7 @@ octo__tool() {
       exit 1
       ;;
   esac
+  sleep 0.5
   echo "Retrieving tool status..."
   sleep 0.5
   get__request "$url"
@@ -498,7 +539,39 @@ case "$cmd" in
     shift
     octo__fan $@
     ;;
-  "cool" | "cooldown")
+  "-ph" | "--preheat")
+    shift
+    ph_profile=preheat_$1
+    eval "ph_profile=\"\${$ph_profile}\""
+    if [[ $ph_profile =~ (^\{ *\"bed\": *\"[0-9]+\", *\"tool\": *\"[0-9]+\"\ *}$) ]]; then
+      read -d "\r" ph_bed ph_tool <<< $(echo $ph_profile | jq '.bed,.tool' | tr -d '"')
+      if [ $ph_bed -gt $max_bed_temp ]; then
+        echo "Error: Value too high. Max bed temperature: $max_bed_temp °C"
+        exit 5
+      elif [ $ph_tool -gt $max_tool_temp ]; then
+        echo "Error: Value too high. Max tool temperature: $max_bed_temp °C"
+        exit 5
+      fi
+      echo -n "Preheating Bed/Tool: $ph_bed/$ph_tool °C..."
+      octo__gcode "__octo__" "M190 S$ph_bed; M104 S$ph_tool"
+      echo "done"
+    else
+      echo "Invalid profile."
+      exit 8
+    fi
+    ;;
+  "--on")       octo__psu "1" ;;
+  "--off")      octo__psu "0" ;;
+  "--toggle")   octo__psu "toggle" ;;
+  "--reboot")   octo__psu "reboot" ;;
+  "--start")    octo__job "start" ;;
+  "--cancel")   octo__job "cancel" ;;
+  "--restart")  octo__job "restart" ;;
+  "--pause")    octo__job "pause" ;;
+  "--resume")   octo__job "pause" "resume" ;;
+  "--select")   octo__file "select" ;;
+  "--unselect") octo__file "unselect" ;;
+  "--cool" | "--cooldown")
     octo__bed 0
     octo__tool 0
     octo__fan 0
