@@ -37,7 +37,7 @@ Commands:
          Disconnect from printer.
 
     -C, --connection
-         Print connection status.
+         Display connection status.
 
     -p, --psu <on | off | toggle | reboot | status>
          Manage PSU state.
