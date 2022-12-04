@@ -596,9 +596,9 @@ octo__preheat() {
           echo "Add a preheat profile with the following command:"
           echo "      $ProgramName -ph --add"
           echo ""
-          break
+          exit 0
           ;;
-        [nN]) exit ;;
+        [nN]) exit 0;;
         *) continue ;;
       esac
     done
