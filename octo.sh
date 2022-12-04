@@ -8,16 +8,11 @@ api_key="$OCTO_API_KEY"
 ### PRINTER CONFIG ##
 #####################
 max_bed_temp=140
-max_tool_temp=260
-#####################
-## PREHEAT PROFILES #
-#####################
-preheat_template='{"bed": "xx", "tool": "xxx"}'
-preheat_pla='{"bed": "60", "tool": "180"}'
-preheat_petg='{"bed": "80", "tool": "210"}'
+max_tool_temp=285
 #####################
 #####################
-ProgramName=$(basename $0)
+ProgramName="$(basename $0)"
+ProgramDir="$(cd $(dirname $0) && pwd)"
 
 octo__help() {
   echo "Usage: $ProgramName [command] <option>"
@@ -77,13 +72,8 @@ octo__help() {
   echo "    -f, --fan <off | [0-100]% | [0-255]>"
   echo "         Set cooling fan speed."
   echo ""
-  echo "    -ph, --preheat <'profile name'>"
+  echo "    -ph, --preheat <'profile name' | --add | --list>"
   echo "         Preheat bed/tool using values in the given preheat profile."
-  echo "            Example:"
-  echo "              Profile \"petg\" is declared at top of script as:"
-  echo "                preheat_petg='{\"bed\": \"80\", \"tool\": \"210\"}'"
-  echo "              Enter command:"
-  echo "                $ProgramName --preheat petg"
   echo ""
 }
 
@@ -322,14 +312,14 @@ octo__file() {
             echo "done"
           else
             echo ""
-            echo "Error unselecting file."
+            echo "Error unselecting file." >&2
             exit 2
           fi
         else
           echo "No file is currently selected."
         fi
       else
-        echo "Error: Printer is not operational."
+        echo "Error: Printer is not operational." >&2
         exit 1
       fi
       ;;
@@ -360,7 +350,7 @@ octo__file() {
               octo__job 2>/dev/null
             else
               echo ""
-              echo "Error: Printer is not operational."
+              echo "Error: Printer is not operational." >&2
               exit 3
             fi
             ;;
@@ -368,13 +358,13 @@ octo__file() {
       fi
       ;;
     "")
-      echo "Error: Missing argument."
+      echo "Error: Missing argument." >&2
       echo "Usage:"
       echo "      $ProgramName --files <select | unselect>"
       exit 1
       ;;
     *)
-      echo "Error: Invalid argument."
+      echo "Error: Invalid argument." >&2
       echo "Usage:"
       echo "      $ProgramName --files <select | unselect>"
       exit 1
@@ -402,7 +392,7 @@ octo__bed() {
       ;;
     "" | "status") ;;
     *)
-      echo "Error: Invalid argument."
+      echo "Error: Invalid argument." >&2
       echo "Usage:"
       echo "      $ProgramName --bed <off | [value in °C] | status>"
       exit 1
@@ -423,7 +413,7 @@ octo__tool() {
         octo__gcode "__octo__" "M104 S$1"
         echo "done"
       else
-        echo "Error: Value too high. Max tool temperature: $max_tool_temp °C"
+        echo "Error: Value too high. Max tool temperature: $max_tool_temp °C" >&2
         exit 1
       fi
       ;;
@@ -434,7 +424,7 @@ octo__tool() {
       ;;
     "" | "status") ;;
     *)
-      echo "Error: Invalid argument."
+      echo "Error: Invalid argument." >&2
       echo "Usage:"
       echo "      $ProgramName --tool <off | [value in °C] | status>"
       exit 1
@@ -449,7 +439,7 @@ octo__tool() {
 octo__fan() {
   case "$1" in
     "")
-      echo "Error: Missing argument."
+      echo "Error: Missing argument." >&2
       echo "Usage:"
       echo "      $ProgramName --fan <off | [0-100]% | [0-255]>"
       exit 1
@@ -461,7 +451,7 @@ octo__fan() {
         octo__gcode "__octo__" "M106 S$1"
         echo "done"
       else
-        echo "Error: Value too high. Max fan speed: 255"
+        echo "Error: Value too high. Max fan speed: 255" >&2
         exit 1
       fi
       ;;
@@ -474,7 +464,7 @@ octo__fan() {
         octo__gcode "__octo__" "M106 S$val"
         echo "done"
       else
-        echo "Error: Invalid argument."
+        echo "Error: Invalid argument." >&2
         echo "Usage:"
         echo "      $ProgramName --fan <[0-100]%>"
         exit 1
@@ -487,12 +477,145 @@ octo__fan() {
       echo "done"
       ;;
     *)
-      echo "Error: Invalid argument."
+      echo "Error: Invalid argument." >&2
       echo "Usage:"
       echo "      $ProgramName --fan <off | [0-100]% | [0-255]>"
       exit 1
       ;;
   esac
+}
+
+octo__preheat() {
+  ph_file="$ProgramDir/octo_preheat_profiles.json"
+
+  add_profile() {
+    echo -e "Creating preheat profile..."
+
+    while true; do
+      read -p "Enter preheat profile name: " ph_name
+      case "$ph_name" in
+        *[[:space:]]* )
+          echo "Error: Invalid input. Profile name may not contain spaces." >&2
+          ;;
+        "" ) ;;
+        * ) 
+          if [ $(jq ".profiles | has(\"$ph_name\")" $ph_file ) == true ]; then
+            echo "Error: Profile \"$ph_name\" already exists." >&2
+            exit 1
+          else break
+          fi
+          ;;
+      esac
+    done
+
+    while true; do
+      read -p "Enter bed preheat temperature: " ph_bed
+
+      if ! [[ "$ph_bed" =~ ^[0-9]+$ ]]; then
+        echo "Error: Invalid input." >&2
+        continue
+      fi
+
+      if [ "$ph_bed" -le "$max_bed_temp" ]; then break
+      else
+        echo "Error: Value too high. Max bed temperature: $max_bed_temp °C" >&2
+        continue
+      fi
+    done
+
+    while true; do
+    read -p "Enter tool preheat temperature: " ph_tool
+
+      if ! [[ "$ph_tool" =~ ^[0-9]+$ ]]; then
+        echo "Error: Invalid input." >&2
+        continue
+      fi
+
+      if [ "$ph_tool" -le "$max_tool_temp" ]; then break
+      else
+        echo "Error: Value too high. Max tool temperature: $max_tool_temp °C" >&2
+        continue
+      fi
+    done
+
+    ph_profile=$(jq -n \
+                    --arg name "$ph_name" \
+                    --argjson bed "$ph_bed" \
+                    --argjson tool "$ph_tool" \
+                    '{($name):{bed:$bed,tool:$tool}}')
+    echo $ph_profile | jq
+
+    while True; do
+      read -p "Add profile \"$ph_name\"? [y/N]: " -n 1 yn
+      echo ""
+      case $yn in
+        [yY])
+          echo -n "Adding profile \"$ph_name\"..."
+          jq --argjson profile \
+            "$ph_profile" '.profiles += $profile' $ph_file > octo__temp__json \
+            && mv octo__temp__json $ph_file \
+          && echo "done" \
+          && break
+          
+          echo "Error adding profile."
+          exit 1
+          ;;
+        [nN]) exit ;;
+        * ) continue ;;
+      esac
+    done
+  }
+
+  preheat() {
+    if [ $(jq ".profiles | has(\"$1\")" $ph_file ) == false ]; then
+      echo "Error: Profile \"$1\" not found." >&2
+      echo "Add a preheat profile with the following command:"
+      echo "      $ProgramName -ph --add"
+      exit 1
+    fi
+
+    ph_bed=$(jq ".profiles.$1.bed" $ph_file)
+    ph_tool=$(jq ".profiles.$1.tool" $ph_file)
+
+    echo -n "Preheating Bed/Tool: $ph_bed/$ph_tool °C..."
+    octo__gcode "__octo__" "M190 S$ph_bed; M104 S$ph_tool"
+    echo "done"
+  }
+  
+  if [ ! -f $ph_file ]; then
+    echo -e "File \"$ProgramDir/\033[1;33mocto_preheat_profiles.json\033[0m\" not found." >&2
+    while True; do
+      read -p "Create file? [y/N]: " -n 1 yn
+      echo ""
+      case $yn in
+        [yY])
+          echo -n "Creating \"$ph_file\"..."
+          echo '{ "profiles": {} }' > $ph_file
+          echo "done"
+          echo ""
+          echo "Add a preheat profile with the following command:"
+          echo "      $ProgramName -ph --add"
+          echo ""
+          break
+          ;;
+        [nN]) exit ;;
+        *) continue ;;
+      esac
+    done
+  fi
+
+  case "$1" in
+    "") 
+      echo "Error: Missing argument." >&2
+      echo "Usage:"
+      echo "      $ProgramName -ph <'profile name' | --add | --list>"
+      exit 1
+      ;;
+    "-a" | "--add") add_profile ;;
+    "-l" | "--list") jq '.profiles' $ph_file ;;
+    *) preheat "$1" ;;
+  esac
+
 }
 
 cmd="$1"
@@ -541,24 +664,7 @@ case "$cmd" in
     ;;
   "-ph" | "--preheat")
     shift
-    ph_profile=preheat_$1
-    eval "ph_profile=\"\${$ph_profile}\""
-    if [[ $ph_profile =~ (^\{ *\"bed\": *\"[0-9]+\", *\"tool\": *\"[0-9]+\"\ *}$) ]]; then
-      read -d "\r" ph_bed ph_tool <<< $(echo $ph_profile | jq '.bed,.tool' | tr -d '"')
-      if [ $ph_bed -gt $max_bed_temp ]; then
-        echo "Error: Value too high. Max bed temperature: $max_bed_temp °C"
-        exit 5
-      elif [ $ph_tool -gt $max_tool_temp ]; then
-        echo "Error: Value too high. Max tool temperature: $max_bed_temp °C"
-        exit 5
-      fi
-      echo -n "Preheating Bed/Tool: $ph_bed/$ph_tool °C..."
-      octo__gcode "__octo__" "M190 S$ph_bed; M104 S$ph_tool"
-      echo "done"
-    else
-      echo "Invalid profile."
-      exit 8
-    fi
+    octo__preheat $@
     ;;
   "--on")       octo__psu "1" ;;
   "--off")      octo__psu "0" ;;
@@ -578,7 +684,7 @@ case "$cmd" in
     ;;
   *)
     echo "Error: invalid syntax or '$cmd' is not a known command." >&2
-    echo "    Run '$ProgramName --help' for a list of known commands." >&2
+    echo "    Run '$ProgramName --help' for a list of known commands."
     echo ""
     exit 1
     ;;
