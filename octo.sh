@@ -545,7 +545,7 @@ octo__preheat() {
                     '{($name):{bed:$bed,tool:$tool}}')
     echo $ph_profile | jq
 
-    while True; do
+    while true; do
       read -p "Add profile \"$ph_name\"? [y/N]: " -n 1 yn
       echo ""
       case $yn in
@@ -584,7 +584,7 @@ octo__preheat() {
   
   if [ ! -f $ph_file ]; then
     echo -e "File \"$ProgramDir/\033[1;33mocto_preheat_profiles.json\033[0m\" not found." >&2
-    while True; do
+    while true; do
       read -p "Create file? [y/N]: " -n 1 yn
       echo ""
       case $yn in
