@@ -1,18 +1,15 @@
 #!/bin/bash
-#####################
-### SERVER CONFIG ###
-#####################
-server_url="http://$OCTO_IP_ADDRESS"
-api_key="$OCTO_API_KEY"
-#####################
-### PRINTER CONFIG ##
-#####################
-max_bed_temp=140
-max_tool_temp=285
-#####################
-#####################
 ProgramName="$(basename $0)"
 ProgramDir="$(cd $(dirname $0) && pwd)"
+
+if test -f ${ProgramDir}/octo.cfg; then
+  . ${ProgramDir}/octo.cfg
+else
+  echo "Configuration file \"octo.cfg\" not found!" >&2
+  echo -e "Create \"\033[1;33mocto.cfg\033[0m\" in \"\033[1;33m$ProgramDir\033[0m\""
+  echo "Download/copy the template from: https://github.com/humzakh/octoprint-cli/blob/master/octo.cfg"
+  exit 8
+fi
 
 octo__help() {
   echo "Usage: $ProgramName [command] <option>"
@@ -501,7 +498,7 @@ octo__preheat() {
           echo "Error: \"$ph_name\" is reserved and cannot be used as a profile name." >&2
           ;;
         "" ) ;;
-        * ) 
+        * )
           if [ $(jq ".profiles | has(\"$ph_name\")" $ph_file ) == true ]; then
             echo "Error: Profile \"$ph_name\" already exists." >&2
             exit 1
@@ -559,7 +556,7 @@ octo__preheat() {
             && mv octo__temp__json $ph_file \
           && echo "done" \
           && break
-          
+
           echo "Error adding profile."
           exit 1
           ;;
@@ -584,7 +581,7 @@ octo__preheat() {
     octo__gcode "__octo__" "M190 S$ph_bed; M104 S$ph_tool"
     echo "done"
   }
-  
+
   if [ ! -f $ph_file ]; then
     echo -e "File \"$ProgramDir/\033[1;33mocto_preheat_profiles.json\033[0m\" not found." >&2
     while true; do
@@ -608,7 +605,7 @@ octo__preheat() {
   fi
 
   case "$1" in
-    "") 
+    "")
       echo "Error: Missing argument." >&2
       echo "Usage:"
       echo "      $ProgramName -ph <'profile name' | add | list>"
