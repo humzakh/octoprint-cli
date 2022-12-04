@@ -11,13 +11,13 @@ else
   exit 8
 fi
 
-octo__help() {
+function octo__help() {
   echo "Usage: $ProgramName [command] <option>"
   echo ""
   echo "Commands:"
   echo ""
   echo "    -h, --help"
-  echo "         Print this help message."
+  echo "         Display this help message."
   echo ""
   echo "    -c, --connect"
   echo "         Connect to printer via serial port."
@@ -26,7 +26,7 @@ octo__help() {
   echo "         Disconnect from printer."
   echo ""
   echo "    -C, --connection"
-  echo "         Print connection status."
+  echo "         Display connection status."
   echo ""
   echo "    -p, --psu <on | off | toggle | reboot | status>"
   echo "         Manage PSU state."
@@ -69,12 +69,12 @@ octo__help() {
   echo "    -f, --fan <off | [0-100]% | [0-255]>"
   echo "         Set cooling fan speed."
   echo ""
-  echo "    -ph, --preheat <'profile name' | add | list>"
+  echo "    -ph, --preheat <'profile name' | add | remove | list>"
   echo "         Preheat bed/tool using values in the given preheat profile."
   echo ""
 }
 
-post__request() {
+function post__request() {
   if [[ $# == 2 ]]; then
     response=$(curl --silent --show-error \
                     --header "Content-Type: application/json" \
@@ -98,7 +98,7 @@ post__request() {
   fi
 }
 
-get__request() {
+function get__request() {
   curl --silent --show-error \
        --header "Content-Type: application/json" \
        --header "X-Api-Key: $api_key" \
@@ -108,7 +108,7 @@ get__request() {
 }
 
 # arrowkey selection menu from: https://unix.stackexchange.com/a/415155
-select_option() {
+function select_option() {
   # little helpers for terminal print control and key input
   ESC=$( printf "\033")
   cursor_blink_on()  { printf "$ESC[?25h"; }
@@ -164,14 +164,14 @@ select_option() {
 
   return $selected
 }
-select_opt() {
+function select_opt() {
   select_option "$@" 1>&2
   local result=$?
   echo $result
   return $result
 }
 
-octo__gcode() {
+function octo__gcode() {
   local url="$server_url/api/printer/command"
   case $(tr '[:upper:]' '[:lower:]' <<< "$1") in
     "")
@@ -207,7 +207,7 @@ octo__gcode() {
   esac
 }
 
-octo__job() {
+function octo__job() {
   local url="$server_url/api/job"
   case $(tr '[:upper:]' '[:lower:]' <<< "$1") in
     "start" | "cancel" | "restart")
@@ -226,7 +226,7 @@ octo__job() {
   get__request "$url"
 }
 
-octo__psu() {
+function octo__psu() {
   local url="$server_url/api/plugin/psucontrol"
   local cmd=""
   case $(echo "$1" | tr '[:upper:]' '[:lower:]') in
@@ -260,7 +260,7 @@ octo__psu() {
   post__request "getPSUState" "$url"
 }
 
-octo__connection() {
+function octo__connection() {
   local url="$server_url/api/connection"
   case "$1" in
     "0")
@@ -280,10 +280,10 @@ octo__connection() {
   get__request "$url"
 }
 
-octo__file() {
+function octo__file() {
   local url="$server_url/api/files"
   local json
-  request_files() {
+  function request_files() {
     echo "Requesting file list..."
     json=$(wget --quiet \
                 --show-progress --progress=bar:force \
@@ -369,7 +369,7 @@ octo__file() {
   esac
 }
 
-octo__bed() {
+function octo__bed() {
   local url="$server_url/api/printer/bed"
   case "$1" in
     [0-9] | [0-9][0-9] | [0-9][0-9][0-9])
@@ -401,7 +401,7 @@ octo__bed() {
   get__request "$url"
 }
 
-octo__tool() {
+function octo__tool() {
   local url="$server_url/api/printer/tool"
   case "$1" in
     [0-9] | [0-9][0-9] | [0-9][0-9][0-9])
@@ -433,7 +433,7 @@ octo__tool() {
   get__request "$url"
 }
 
-octo__fan() {
+function octo__fan() {
   case "$1" in
     "")
       echo "Error: Missing argument." >&2
@@ -482,23 +482,49 @@ octo__fan() {
   esac
 }
 
-octo__preheat() {
+function octo__preheat() {
   ph_file="$ProgramDir/octo_preheat_profiles.json"
 
-  add_profile() {
-    echo -e "Creating preheat profile..."
+  function create_ph_file() {
+    if [ ! -f $ph_file ]; then
+      echo -e "File \"$ProgramDir/\033[1;33mocto_preheat_profiles.json\033[0m\" not found." >&2
+      while true; do
+        read -p "Create file? [y/N]: " -n 1 yn
+        echo ""
+        case $yn in
+          [yY])
+            echo -n "Creating \"$ph_file\"..."
+            echo '{ "profiles": {} }' > $ph_file
+            echo "done"
+            echo ""
+            echo "Add a preheat profile with the following command:"
+            echo "      $ProgramName -ph add"
+            echo ""
+            exit 0
+            ;;
+          [nN]) exit 0;;
+          *) continue ;;
+        esac
+      done
+    fi
+  }
+
+  function add_profile() {
+    echo "Creating preheat profile..."
 
     while true; do
       read -p "Enter preheat profile name: " ph_name
       case "$ph_name" in
-        *[[:space:]]* )
+        *[[:space:]]*)
           echo "Error: Invalid input. Profile name cannot contain spaces." >&2
+          continue
           ;;
-        "add" | "list")
+        "add" | "list" | "remove")
           echo "Error: \"$ph_name\" is reserved and cannot be used as a profile name." >&2
+          continue
           ;;
-        "" ) ;;
-        * )
+        "") ;;
+        *)
           if [ $(jq ".profiles | has(\"$ph_name\")" $ph_file ) == true ]; then
             echo "Error: Profile \"$ph_name\" already exists." >&2
             exit 1
@@ -551,22 +577,95 @@ octo__preheat() {
       case $yn in
         [yY])
           echo -n "Adding profile \"$ph_name\"..."
-          jq --argjson profile \
-            "$ph_profile" '.profiles += $profile' $ph_file > octo__temp__json \
+          jq --argjson profile "$ph_profile" \
+            '.profiles += $profile' $ph_file > octo__temp__json \
             && mv octo__temp__json $ph_file \
           && echo "done" \
           && break
 
-          echo "Error adding profile."
+          echo "Error adding profile." >&2
           exit 1
           ;;
-        [nN]) exit ;;
-        * ) continue ;;
+        [nN]) exit 0 ;;
+        *) continue ;;
       esac
     done
   }
 
-  preheat() {
+  function remove_profile() {    
+    case "$1" in
+      "")
+        while true; do
+          read -p "Enter name of preheat profile for removal: " ph_name
+          case "$ph_name" in
+            *[[:space:]]*)
+              echo "Error: Invalid input. Profile name cannot contain spaces." >&2
+              ;;
+            "") continue ;;
+            *)
+              if [ $(jq ".profiles | has(\"$ph_name\")" $ph_file ) == false ]; then
+                echo "Error: Profile \"$ph_name\" does not exist." >&2
+                echo "List preheat profiles with the following command:"
+                echo "      $ProgramName -ph list"
+                exit 1
+              else break
+              fi
+              ;;
+          esac
+        done;;
+      *)
+        ph_name="$1"
+        case "$ph_name" in
+          *[[:space:]]*)
+            echo "Error: Invalid input. Profile name cannot contain spaces." >&2
+            ;;
+          *)
+            if [ $(jq ".profiles | has(\"$ph_name\")" $ph_file ) == false ]; then
+              echo "Error: Profile \"$ph_name\" does not exist." >&2
+              echo "List preheat profiles with the following command:"
+              echo "      $ProgramName -ph list"
+              exit 1
+            else break
+            fi
+            ;;
+        esac
+    esac
+
+    jq --arg name "$ph_name" '.profiles | to_entries | map(select(.key==$name)) | from_entries' $ph_file
+
+    while true; do
+      read -p "Remove profile \"$ph_name\"? [y/N]: " -n 1 yn
+      echo ""
+      case $yn in
+        [yY])
+          echo -n "Removing preheat profile \"$ph_name\"..."
+          jq --arg name "$ph_name" \
+            'del(.profiles | .[$name])' $ph_file > octo__temp__json \
+            && mv octo__temp__json $ph_file \
+          && echo "done" \
+          && exit 0
+
+          echo "Error removing profile." >&2
+          exit 1
+          ;;
+        [nN]) exit 0 ;;
+        *) continue ;;
+      esac
+    done
+  }
+
+  function list_profiles() {
+    if [ $(jq 'any(.profiles; . == {})' $ph_file) == true ]; then
+      echo "No preheat profiles found."
+      echo ""
+      echo "Add a preheat profile with the following command:"
+      echo "      $ProgramName -ph add"
+    else
+      jq '.profiles' $ph_file
+    fi
+  }
+
+  function preheat() {
     if [ $(jq ".profiles | has(\"$1\")" $ph_file ) == false ]; then
       echo "Error: Profile \"$1\" not found." >&2
       echo "Add a preheat profile with the following command:"
@@ -582,101 +681,48 @@ octo__preheat() {
     echo "done"
   }
 
-  if [ ! -f $ph_file ]; then
-    echo -e "File \"$ProgramDir/\033[1;33mocto_preheat_profiles.json\033[0m\" not found." >&2
-    while true; do
-      read -p "Create file? [y/N]: " -n 1 yn
-      echo ""
-      case $yn in
-        [yY])
-          echo -n "Creating \"$ph_file\"..."
-          echo '{ "profiles": {} }' > $ph_file
-          echo "done"
-          echo ""
-          echo "Add a preheat profile with the following command:"
-          echo "      $ProgramName -ph add"
-          echo ""
-          exit 0
-          ;;
-        [nN]) exit 0;;
-        *) continue ;;
-      esac
-    done
-  fi
+  create_ph_file
 
   case "$1" in
     "")
       echo "Error: Missing argument." >&2
       echo "Usage:"
-      echo "      $ProgramName -ph <'profile name' | add | list>"
+      echo "      $ProgramName -ph <'profile name' | add | remove | list>"
       exit 1
       ;;
-    "-l" | "--list" | "list") jq '.profiles' $ph_file ;;
-    "-a" | "--add" | "add")   add_profile ;;
-    *) preheat "$1" ;;
+    
+    "add")           add_profile ;;
+    "remove") shift; remove_profile $@ ;;
+    "list")          list_profiles ;;
+    *)               preheat "$1" ;;
   esac
-
 }
 
 cmd="$1"
 case "$cmd" in
-  "" | "-h" | "--help")
-    octo__help ;;
-  "-g" | "--gcode")
-    shift
-    octo__gcode "$@"
-    ;;
-  "-j" | "--job")
-    shift
-    octo__job $@
-    ;;
-  "-p" | "--psu")
-    shift
-    octo__psu $@
-    ;;
-  "-c" | "--connect")
-    shift
-    octo__connection "1"
-    ;;
-  "-d" | "--disconnect")
-    shift
-    octo__connection "0"
-    ;;
-  "-C" | "--connection")
-    shift
-    octo__connection $@
-    ;;
-  "-F" | "--file")
-    shift
-    octo__file $@
-    ;;
-  "-b" | "--bed")
-    shift
-    octo__bed $@
-    ;;
-  "-t" | "--tool" | "--hotend")
-    shift
-    octo__tool $@
-    ;;
-  "-f" | "--fan")
-    shift
-    octo__fan $@
-    ;;
-  "-ph" | "--preheat")
-    shift
-    octo__preheat $@
-    ;;
-  "--on")       octo__psu "1" ;;
-  "--off")      octo__psu "0" ;;
-  "--toggle")   octo__psu "toggle" ;;
-  "--reboot")   octo__psu "reboot" ;;
-  "--start")    octo__job "start" ;;
-  "--cancel")   octo__job "cancel" ;;
-  "--restart")  octo__job "restart" ;;
-  "--pause")    octo__job "pause" ;;
-  "--resume")   octo__job "pause" "resume" ;;
-  "--select")   octo__file "select" ;;
-  "--unselect") octo__file "unselect" ;;
+  "" | "-h" | "--help") octo__help ;;
+  "-g" | "--gcode")             shift; octo__gcode "$@" ;;
+  "-j" | "--job")               shift; octo__job $@ ;;
+  "-p" | "--psu")               shift; octo__psu $@ ;;
+  "-c" | "--connect")           shift; octo__connection "1" ;;
+  "-d" | "--disconnect")        shift; octo__connection "0" ;;
+  "-C" | "--connection")        shift; octo__connection $@ ;;
+  "-F" | "--file")              shift; octo__file $@ ;;
+  "-b" | "--bed")               shift; octo__bed $@ ;;
+  "-t" | "--tool" | "--hotend") shift; octo__tool $@ ;;
+  "-f" | "--fan")               shift; octo__fan $@ ;;
+  "-ph" | "--preheat")          shift; octo__preheat $@ ;;
+  "--on")                              octo__psu "1" ;;
+  "--off")                             octo__psu "0" ;;
+  "--toggle")                          octo__psu "toggle" ;;
+  "--reboot")                          octo__psu "reboot" ;;
+  "--start")                           octo__job "start" ;;
+  "--cancel")                          octo__job "cancel" ;;
+  "--restart")                         octo__job "restart" ;;
+  "--pause")                           octo__job "pause" ;;
+  "--resume")                          octo__job "pause" "resume" ;;
+  "--select")                          octo__file "select" ;;
+  "--unselect")                        octo__file "unselect" ;;
   "--cool" | "--cooldown")
     octo__bed 0
     octo__tool 0
