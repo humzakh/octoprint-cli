@@ -72,7 +72,7 @@ octo__help() {
   echo "    -f, --fan <off | [0-100]% | [0-255]>"
   echo "         Set cooling fan speed."
   echo ""
-  echo "    -ph, --preheat <'profile name' | --add | --list>"
+  echo "    -ph, --preheat <'profile name' | add | list>"
   echo "         Preheat bed/tool using values in the given preheat profile."
   echo ""
 }
@@ -495,7 +495,10 @@ octo__preheat() {
       read -p "Enter preheat profile name: " ph_name
       case "$ph_name" in
         *[[:space:]]* )
-          echo "Error: Invalid input. Profile name may not contain spaces." >&2
+          echo "Error: Invalid input. Profile name cannot contain spaces." >&2
+          ;;
+        "add" | "list")
+          echo "Error: \"$ph_name\" is reserved and cannot be used as a profile name." >&2
           ;;
         "" ) ;;
         * ) 
@@ -570,7 +573,7 @@ octo__preheat() {
     if [ $(jq ".profiles | has(\"$1\")" $ph_file ) == false ]; then
       echo "Error: Profile \"$1\" not found." >&2
       echo "Add a preheat profile with the following command:"
-      echo "      $ProgramName -ph --add"
+      echo "      $ProgramName -ph add"
       exit 1
     fi
 
@@ -594,7 +597,7 @@ octo__preheat() {
           echo "done"
           echo ""
           echo "Add a preheat profile with the following command:"
-          echo "      $ProgramName -ph --add"
+          echo "      $ProgramName -ph add"
           echo ""
           exit 0
           ;;
@@ -608,11 +611,11 @@ octo__preheat() {
     "") 
       echo "Error: Missing argument." >&2
       echo "Usage:"
-      echo "      $ProgramName -ph <'profile name' | --add | --list>"
+      echo "      $ProgramName -ph <'profile name' | add | list>"
       exit 1
       ;;
-    "-a" | "--add") add_profile ;;
-    "-l" | "--list") jq '.profiles' $ph_file ;;
+    "-l" | "--list" | "list") jq '.profiles' $ph_file ;;
+    "-a" | "--add" | "add")   add_profile ;;
     *) preheat "$1" ;;
   esac
 
