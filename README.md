@@ -20,7 +20,7 @@ chmod +x octo.sh
 #### Optional, but useful
 Add the following function to your shell's rc file so that you can easily run the ```octo``` command.
 ``` console
-function octo() { /{PATH TO SCRIPT}/octo.sh $@ }
+function octo() { /PATH/TO/SCRIPT/octo.sh $@ }
 ```
 #
 ```
