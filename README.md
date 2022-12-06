@@ -10,7 +10,7 @@
 ``` console
 chmod +x octo.sh
 ```
-3. Open ```octo.cfg``` and modify the Server/Printer configs.
+3. Open ```octo.cfg``` and modify the Server/Printer config values.
   * OctoPrint API keys can be generated at ```OctoPrint Settings > Features > Application Keys```
 4. Run the script
 ``` console
