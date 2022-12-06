@@ -50,7 +50,7 @@ Commands:
 
     -g, --gcode <'G-code Commands' | help>
          Send G-code commands (semicolon separated) to printer.
-         <help>: Display link to [Marlin G-code documentation](https://marlinfw.org/meta/gcode/).
+         <help>: Display link to Marlin G-code documentation.
 
     -s, --select
          Select a file for printing from local storage.
