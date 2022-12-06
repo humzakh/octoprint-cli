@@ -28,7 +28,7 @@ Usage: octo.sh [command] <option>
 Commands:
 
     -h, --help
-         Print this help message.
+         Display this help message.
 
     -c, --connect
          Connect to printer via serial port.
