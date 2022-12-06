@@ -4,7 +4,7 @@
 
 ## Instructions
 
-0. Set up [OctoPrint](https://octoprint.org) 
+0. Set up [OctoPrint](https://octoprint.org/) 
 1. Clone this repo
 2. Grant execution permissions for the script
 ``` console
@@ -50,7 +50,7 @@ Commands:
 
     -g, --gcode <'G-code Commands' | help>
          Send G-code commands (semicolon separated) to printer.
-         <help>: Display link to Marlin G-code documentation.
+         <help>: Display link to [Marlin G-code documentation](https://marlinfw.org/meta/gcode/).
 
     -s, --select
          Select a file for printing from local storage.
