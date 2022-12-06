@@ -63,11 +63,11 @@ Commands:
     -S, --start
          Start print job.
 
-    -C, --cancel, --abort
-         Abort running print job.
+    -C, --cancel
+         Abort current print job.
 
     -P, --pause
-         Pause running print job.
+         Pause current print job.
 
     -R, --resume
          Resume paused print job.
