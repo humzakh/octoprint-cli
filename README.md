@@ -44,7 +44,8 @@ Commands:
              Must have PSU Control plugin installed
              & configured in your Octoprint instance.
                https://plugins.octoprint.org/plugins/psucontrol
-         <reboot>: Turns PSU off, waits 5 seconds, turns PSU on.
+         Each of these PSU options can be sent as their own commands.
+             e.g. --on, --off, --reboot, etc.
 
     -g, --gcode <'G-code Commands' | help>
          Send G-code commands (semicolon separated) to printer.
@@ -54,7 +55,7 @@ Commands:
          Select a file for printing from local storage.
 
     -u, --unselect
-         Uneselect currently selected file.
+         Unselect currently selected file.
 
     -j, --job
          View current job status.
@@ -80,6 +81,6 @@ Commands:
     -f, --fan <off | [0-100]% | [0-255]>
          Set cooling fan speed.
 
-    -ph, --preheat <'profile name' | add | list>
+    -ph, --preheat <'profile name' | add | remove | list>
          Preheat bed/tool using values in the given preheat profile.
 ```
