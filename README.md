@@ -4,6 +4,7 @@
 
 ## Instructions
 
+0. Set up [OctoPrint](https://octoprint.org) 
 1. Clone this repo
 2. Grant execution permissions for the script
 ``` console
