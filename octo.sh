@@ -90,12 +90,13 @@ function post__request() {
       echo ""
       echo "$response"
       exit $return_value
-    fi
-
-    if [ ! -z "$response" ]; then
+    elif [ ! -z "$response" ]; then
       echo ""
       echo "$response" | jq
     fi
+  else
+    echo "Error: post__request invalid arguments." >&2
+    exit 9
   fi
 }
 
@@ -172,6 +173,21 @@ function select_opt() {
   return $result
 }
 
+function octo__sleep() {
+  if ! [[ "$1" =~ ^[0-9]+$ ]]; then
+    echo "Error: Invalid input." >&2
+    exit 1
+  fi
+
+  secs=$(($1 * 60))
+  while [ $secs -gt 0 ]; do
+    echo -ne "Sleeping $secs...\033[0K\r"
+    sleep 1
+    : $((secs--))
+  done
+  echo -ne "\033[0K\r"
+}
+
 function octo__gcode() {
   local url="$server_url/api/printer/command"
   case $(tr '[:upper:]' '[:lower:]' <<< "$1") in
@@ -181,26 +197,33 @@ function octo__gcode() {
       ;;
     "help")
       echo "https://marlinfw.org/meta/gcode/" ;;
-    "__octo__")
-      if [[ $# == 2 ]]; then
-        local old_IFS="$IFS"
-        while IFS=';\n\r' read -ra ADDR; do
-          for addr in "${ADDR[@]}"; do
-            local cmd=$(echo "$addr" | sed -e 's/^ *//' -e 's/ *$//' | tr '[:lower:]' '[:upper:]')
-            post__request "$cmd" "$url"
-          done
-        done <<< "$2"
-        IFS="$old_IFS"
-      fi
-      ;;
     *)
+      print_cmd=true
+      if [[ $# == 2 ]]; then
+        case "$1" in
+          "--silent")
+            print_cmd=false
+            shift
+            ;;
+          *)
+            echo "Error: Unrecognized argument." >&2
+            exit 1
+            ;;
+        esac
+      fi
+
       local old_IFS="$IFS"
       while IFS=';\n\r' read -ra ADDR; do
         for addr in "${ADDR[@]}"; do
           local cmd=$(echo "$addr" | sed -e 's/^ *//' -e 's/ *$//' | tr '[:lower:]' '[:upper:]')
-          echo -n "Sending \"$cmd\"..."
-          post__request "$cmd" "$url"
-          echo "done"
+          if [ "$print_cmd" = true ]; then echo -n "Sending \"$cmd\"..."; fi
+          local response="$(post__request "$cmd" "$url")"
+          if [[ "$(jq '.error' <<< "$response")" == "\"Printer is not operational\"" ]]; then
+            echo ""
+            jq <<< "$response"
+            exit 4
+          fi
+          if [ "$print_cmd" = true ]; then echo "done"; fi
         done
       done <<< "$1"
       IFS="$old_IFS"
@@ -593,7 +616,7 @@ function octo__preheat() {
     done
   }
 
-  function remove_profile() {    
+  function remove_profile() {
     case "$1" in
       "")
         while true; do
@@ -678,7 +701,7 @@ function octo__preheat() {
     ph_tool=$(jq ".profiles.$1.tool" $ph_file)
 
     echo -n "Preheating Bed/Tool: $ph_bed/$ph_tool °C..."
-    octo__gcode "__octo__" "M190 S$ph_bed; M104 S$ph_tool"
+    octo__gcode --silent "M190 S$ph_bed; M104 S$ph_tool"
     echo "done"
   }
 
@@ -691,7 +714,7 @@ function octo__preheat() {
       echo "      $ProgramName -ph <'profile name' | add | remove | list>"
       exit 1
       ;;
-    
+
     "add")           add_profile ;;
     "remove") shift; remove_profile $@ ;;
     "list")          list_profiles ;;
@@ -702,6 +725,7 @@ function octo__preheat() {
 cmd="$1"
 case "$cmd" in
   "" | "-h" | "--help") octo__help ;;
+  "--sleep")                    shift; octo__sleep $@ ;;
   "-g" | "--gcode")             shift; octo__gcode "$@" ;;
   "-j" | "--job")               shift; octo__job $@ ;;
   "-p" | "--psu")               shift; octo__psu $@ ;;
