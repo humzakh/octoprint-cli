@@ -762,6 +762,7 @@ case "$cmd" in
   "--restart")                         octo__job "restart" ;;
   "--pause")                           octo__job "pause" ;;
   "--resume")                          octo__job "pause" "resume" ;;
+  "--time")                            octo__job "time" ;;
   "--select")                          octo__file "select" ;;
   "--unselect")                        octo__file "unselect" ;;
   "--cool" | "--cooldown")
