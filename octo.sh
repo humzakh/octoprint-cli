@@ -181,7 +181,7 @@ function octo__sleep() {
 
   secs=$(($1 * 60))
   while [ $secs -gt 0 ]; do
-    printf "%02d:%02d:%02d\r" $((secs/3600)) $(((secs/60)%60)) $((secs%60))
+    printf "\r\033[2K%02d:%02d:%02d" $((secs/3600)) $(((secs/60)%60)) $((secs%60))
     sleep 1
     : $((secs--))
   done
