@@ -181,7 +181,7 @@ function octo__sleep() {
 
   secs=$(($1 * 60))
   while [ $secs -gt 0 ]; do
-    printf "\r\033[2K%02d:%02d:%02d" $((secs/3600)) $(((secs/60)%60)) $((secs%60))
+    printf "\015\033[2K%02d:%02d:%02d" $((secs/3600)) $(((secs/60)%60)) $((secs%60))
     sleep 1
     : $((secs--))
   done
@@ -243,6 +243,22 @@ function octo__job() {
         *)    action="pause" ;;
       esac
       post__request "pause\", \"action\":\"$action" "$url"
+      ;;
+    "time")
+      local response="$(get__request "$url")"
+      if [[ "$(jq '.state' <<< "$response")" == "\"Printing\"" ]]; then
+        printTime="$(jq '.progress.printTime' <<< "$response")"
+        printTimeLeft="$(jq '.progress.printTimeLeft' <<< "$response")"
+        printTimeLeftOrigin="$(jq '.progress.printTimeLeftOrigin' <<< "$response")"
+
+        printf "Print Time:        %02d:%02d:%02d\n" \
+          $((printTime/3600)) $(((printTime/60)%60)) $((printTime%60))
+        printf "Print Time Left:   %02d:%02d:%02d\n" \
+          $((printTimeLeft/3600)) $(((printTimeLeft/60)%60)) $((printTimeLeft%60))
+        printf "Print Time Origin: $printTimeLeftOrigin\n"
+      else echo "Printer is not printing."
+      fi
+      exit 0
       ;;
     *);;
   esac
