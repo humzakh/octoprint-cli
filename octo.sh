@@ -251,11 +251,11 @@ function octo__job() {
         printTimeLeft="$(jq '.progress.printTimeLeft' <<< "$response")"
         printTimeLeftOrigin="$(jq '.progress.printTimeLeftOrigin' <<< "$response")"
 
-        printf "Print Time:        %02d:%02d:%02d\n" \
+        printf "\033[31mPrint Time:        %02d:%02d:%02d\012" \
           $((printTime/3600)) $(((printTime/60)%60)) $((printTime%60))
-        printf "Print Time Left:   %02d:%02d:%02d\n" \
+        printf "\033[32mPrint Time Left:   %02d:%02d:%02d\012" \
           $((printTimeLeft/3600)) $(((printTimeLeft/60)%60)) $((printTimeLeft%60))
-        printf "Print Time Origin: $printTimeLeftOrigin\n"
+        printf "\033[34mPrint Time Origin: $printTimeLeftOrigin\033[0m\012"
       else echo "Printer is not printing."
       fi
       exit 0
@@ -527,7 +527,7 @@ function octo__preheat() {
 
   function create_ph_file() {
     if [ ! -f $ph_file ]; then
-      echo -e "File \"$ProgramDir/\033[1;33mocto_preheat_profiles.json\033[0m\" not found." >&2
+      echo -e "File \"$ProgramDir/\033[33mocto_preheat_profiles.json\033[0m\" not found." >&2
       while true; do
         read -p "Create file? [y/N]: " -n 1 yn
         echo ""
