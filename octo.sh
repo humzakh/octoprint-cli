@@ -198,17 +198,14 @@ function octo__gcode() {
     "help")
       echo "https://marlinfw.org/meta/gcode/" ;;
     *)
-      print_cmd=true
+      show_cmd=true
       if [[ $# == 2 ]]; then
         case "$1" in
           "--silent")
-            print_cmd=false
+            show_cmd=false
             shift
             ;;
-          *)
-            echo "Error: Unrecognized argument." >&2
-            exit 1
-            ;;
+          *);;
         esac
       fi
 
@@ -216,14 +213,14 @@ function octo__gcode() {
       while IFS=';\n\r' read -ra ADDR; do
         for addr in "${ADDR[@]}"; do
           local cmd=$(echo "$addr" | sed -e 's/^ *//' -e 's/ *$//' | tr '[:lower:]' '[:upper:]')
-          if [ "$print_cmd" = true ]; then echo -n "Sending \"$cmd\"..."; fi
+          if [ "$show_cmd" = true ]; then echo -n "Sending \"$cmd\"..."; fi
           local response="$(post__request "$cmd" "$url")"
           if [[ "$(jq '.error' <<< "$response")" == "\"Printer is not operational\"" ]]; then
             echo ""
             jq <<< "$response"
             exit 4
           fi
-          if [ "$print_cmd" = true ]; then echo "done"; fi
+          if [ "$show_cmd" = true ]; then echo "done"; fi
         done
       done <<< "$1"
       IFS="$old_IFS"
@@ -415,7 +412,7 @@ function octo__bed() {
     [0-9] | [0-9][0-9] | [0-9][0-9][0-9])
       if [ "$1" -le "$max_bed_temp" ]; then
         echo -n "Setting bed temperature to $1 °C..."
-        octo__gcode "__octo__" "M140 S$1"
+        octo__gcode --silent "M140 S$1"
         echo "done"
       else
         echo "Error: Value too high. Max bed temperature: $max_bed_temp °C"
@@ -424,7 +421,7 @@ function octo__bed() {
       ;;
     "off" | "cool" | "cooldown")
       echo -n "Setting bed temperature to 0 °C..."
-      octo__gcode "__octo__" "M140 S0"
+      octo__gcode --silent "M140 S0"
       echo "done"
       ;;
     "" | "status") ;;
@@ -447,7 +444,7 @@ function octo__tool() {
     [0-9] | [0-9][0-9] | [0-9][0-9][0-9])
       if [ "$1" -le "$max_tool_temp" ]; then
         echo -n "Setting tool temperature to $1 °C..."
-        octo__gcode "__octo__" "M104 S$1"
+        octo__gcode --silent "M104 S$1"
         echo "done"
       else
         echo "Error: Value too high. Max tool temperature: $max_tool_temp °C" >&2
@@ -456,7 +453,7 @@ function octo__tool() {
       ;;
     "off" | "cool" | "cooldown")
       echo -n "Setting tool temperature to 0 °C..."
-      octo__gcode "__octo__" "M104 S0"
+      octo__gcode --silent "M104 S0"
       echo "done"
       ;;
     "" | "status") ;;
@@ -485,7 +482,7 @@ function octo__fan() {
       if [ "$1" -le 255 ]; then
         echo -n "Setting fan speed to $1..."
         sleep 0.5
-        octo__gcode "__octo__" "M106 S$1"
+        octo__gcode --silent "M106 S$1"
         echo "done"
       else
         echo "Error: Value too high. Max fan speed: 255" >&2
@@ -498,7 +495,7 @@ function octo__fan() {
         local val=$(( 255*percentage/100 ))
         echo -n "Setting fan speed to $1..."
         sleep 0.5
-        octo__gcode "__octo__" "M106 S$val"
+        octo__gcode --silent "M106 S$val"
         echo "done"
       else
         echo "Error: Invalid argument." >&2
