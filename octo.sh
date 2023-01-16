@@ -248,11 +248,11 @@ function octo__job() {
         printTimeLeft="$(jq '.progress.printTimeLeft' <<< "$response")"
         printTimeLeftOrigin="$(jq '.progress.printTimeLeftOrigin' <<< "$response")"
 
-        printf "\033[31mPrint Time:        %02d:%02d:%02d\012" \
+        printf "\033[31mElapsed:   %02d:%02d:%02d\012" \
           $((printTime/3600)) $(((printTime/60)%60)) $((printTime%60))
-        printf "\033[32mPrint Time Left:   %02d:%02d:%02d\012" \
+        printf "\033[32mRemaining: %02d:%02d:%02d\012" \
           $((printTimeLeft/3600)) $(((printTimeLeft/60)%60)) $((printTimeLeft%60))
-        printf "\033[34mPrint Time Origin: $printTimeLeftOrigin\033[0m\012"
+        printf "\033[34mOrigin:    $printTimeLeftOrigin\033[0m\012"
       else echo "Printer is not printing."
       fi
       exit 0
@@ -423,6 +423,12 @@ function octo__bed() {
       echo -n "Setting bed temperature to 0 °C..."
       octo__gcode --silent "M140 S0"
       echo "done"
+      ;;
+    "level")
+      echo -n "Leveling bed..."
+      octo__gcode --silent 'M190 S60; G28; M155 S30; @BEDLEVELVISUALIZER; G29 T; M155 S3; M500'
+      echo "done"
+      exit 0
       ;;
     "" | "status") ;;
     *)
