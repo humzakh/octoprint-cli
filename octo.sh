@@ -16,62 +16,71 @@ function octo__help() {
   echo ""
   echo "Commands:"
   echo ""
-  echo "    -h, --help"
+  echo "    help"
   echo "         Display this help message."
   echo ""
-  echo "    -c, --connect"
+  echo "    connect"
   echo "         Connect to printer via serial port."
   echo ""
-  echo "    -d, --disconnect"
+  echo "    disconnect"
   echo "         Disconnect from printer."
   echo ""
-  echo "    -C, --connection"
+  echo "    connection"
   echo "         Display connection status."
   echo ""
-  echo "    -p, --psu <on | off | toggle | reboot | status>"
+  echo "    psu <on | off | toggle | reboot | status>"
   echo "         Manage PSU state."
   echo "             Must have PSU Control plugin installed"
   echo "             & configured in your Octoprint instance."
   echo "               https://plugins.octoprint.org/plugins/psucontrol"
   echo "         Each of these PSU options can be sent as their own commands."
-  echo "             e.g. --on, --off, --reboot, etc."
+  echo "             e.g. on, off, reboot, etc."
   echo ""
-  echo "    -g, --gcode <'G-code Commands' | help>"
+  echo "    gcode <'G-code Commands' | help>"
   echo "         Send G-code commands (semicolon separated) to printer."
   echo "         <help>: Display link to Marlin G-code documentation."
   echo ""
-  echo "    -s, --select"
+  echo "    select"
   echo "         Select a file for printing from local storage."
   echo ""
-  echo "    -u, --unselect"
+  echo "    unselect"
   echo "         Unselect currently selected file."
   echo ""
-  echo "    -j, --job"
+  echo "    job"
   echo "         View current job status."
   echo ""
-  echo "    -S, --start"
-  echo "         Start print job."
+  echo "    start"
+  echo "         Start currently selected print job."
   echo ""
-  echo "    -C, --cancel"
-  echo "         Abort current print job."
+  echo "    cancel"
+  echo "         Abort currently running print job."
   echo ""
-  echo "    -P, --pause"
-  echo "         Pause current print job."
+  echo "    pause"
+  echo "         Pause currently running print job."
   echo ""
-  echo "    -R, --resume"
-  echo "         Resume paused print job."
+  echo "    resume"
+  echo "         Resume currently paused print job."
   echo ""
-  echo "    -b, --bed <off | [value in °C] | status>"
+  echo "    time"
+  echo "         Display elapsed/remaining time for current print job"
+  echo ""
+  echo "    bed <off | [value in °C] | status>"
   echo "         Set heated bed temperature."
   echo ""
-  echo "    -t, --tool, --hotend <off | [value in °C] | status>"
+  echo "    tool <off | [value in °C] | status>"
   echo "         Set tool/hotend temperature."
   echo ""
-  echo "    -f, --fan <off | [0-100]% | [0-255]>"
+  echo "    fan <off | [0-100]% | [0-255]>"
   echo "         Set cooling fan speed."
   echo ""
-  echo "    -ph, --preheat <'profile name' | add | remove | list>"
+  echo "    preheat <'profile name' | add | remove | list>"
   echo "         Preheat bed/tool using values in the given preheat profile."
+  echo ""
+  echo "    sleep <time in minutes>"
+  echo "         Display countdown timer for <minutes>."
+  echo "         Useful for delaying subsequent commands."
+  echo "             e.g. $ProgramName sleep 10 && $ProgramName start"
+  echo "                  (sleep for 10 minutes, then start print job)"
   echo ""
 }
 
@@ -176,6 +185,8 @@ function select_opt() {
 function octo__sleep() {
   if ! [[ "$1" =~ ^[0-9]+$ ]]; then
     echo "Error: Invalid input." >&2
+    echo "Usage:"
+      echo "      $ProgramName sleep <time in minutes> && $ProgramName [other command]"
     exit 1
   fi
 
@@ -743,37 +754,37 @@ function octo__preheat() {
 
 cmd="$1"
 case "$cmd" in
-  "" | "-h" | "--help") octo__help ;;
-  "--sleep")                    shift; octo__sleep $@ ;;
-  "-g" | "--gcode")             shift; octo__gcode "$@" ;;
-  "-j" | "--job")               shift; octo__job $@ ;;
-  "-p" | "--psu")               shift; octo__psu $@ ;;
-  "-c" | "--connect")           shift; octo__connection "1" ;;
-  "-d" | "--disconnect")        shift; octo__connection "0" ;;
-  "-C" | "--connection")        shift; octo__connection $@ ;;
-  "-F" | "--file")              shift; octo__file $@ ;;
-  "-b" | "--bed")               shift; octo__bed $@ ;;
-  "-t" | "--tool" | "--hotend") shift; octo__tool $@ ;;
-  "-f" | "--fan")               shift; octo__fan $@ ;;
-  "-ph" | "--preheat")          shift; octo__preheat $@ ;;
-  "--on")                              octo__psu "1" ;;
-  "--off")                             octo__psu "0" ;;
-  "--toggle")                          octo__psu "toggle" ;;
-  "--reboot")                          octo__psu "reboot" ;;
-  "--start")                           octo__job "start" ;;
-  "--cancel")                          octo__job "cancel" ;;
-  "--restart")                         octo__job "restart" ;;
-  "--pause")                           octo__job "pause" ;;
-  "--resume")                          octo__job "pause" "resume" ;;
-  "--time")                            octo__job "time" ;;
-  "--select")                          octo__file "select" ;;
-  "--unselect")                        octo__file "unselect" ;;
-  "--cool" | "--cooldown")
+  "" | "-h" | "--help" | "help") octo__help ;;
+  "--sleep" | "sleep")                    shift; octo__sleep $@ ;;
+  "-g" | "--gcode" | "gcode")             shift; octo__gcode "$@" ;;
+  "-j" | "--job"  | "job")                shift; octo__job $@ ;;
+  "-p" | "--psu" | "psu")                 shift; octo__psu $@ ;;
+  "-c" | "--connect" | "connect")         shift; octo__connection "1" ;;
+  "-d" | "--disconnect" | "disconnect")   shift; octo__connection "0" ;;
+  "-C" | "--connection" | "connection")   shift; octo__connection $@ ;;
+  "-F" | "--file" | "file")               shift; octo__file $@ ;;
+  "-b" | "--bed" | "bed")                 shift; octo__bed $@ ;;
+  "-t" | "--tool" | "--hotend" | "tool")  shift; octo__tool $@ ;;
+  "-f" | "--fan" | "fan")                 shift; octo__fan $@ ;;
+  "-ph" | "--preheat" | "ph" | "preheat") shift; octo__preheat $@ ;;
+  "--on" | "on")                                 octo__psu "1" ;;
+  "--off" | "off")                               octo__psu "0" ;;
+  "--toggle" | "toggle")                         octo__psu "toggle" ;;
+  "--reboot" | "reboot")                         octo__psu "reboot" ;;
+  "--start" | "start")                           octo__job "start" ;;
+  "--cancel" | "cancel" | "abort" | "stop")      octo__job "cancel" ;;
+  "--restart" | "restart")                       octo__job "restart" ;;
+  "--pause" | "pause")                           octo__job "pause" ;;
+  "--resume" | "resume")                         octo__job "pause" "resume" ;;
+  "--time" | "time")                             octo__job "time" ;;
+  "--select" | "select")                         octo__file "select" ;;
+  "--unselect" | "unselect")                     octo__file "unselect" ;;
+  "--cool" | "--cooldown" | "cool" | "cooldown") 
     octo__bed 0
     octo__tool 0
     octo__fan 0
     ;;
-  *)
+  *) 
     echo "Error: invalid syntax or '$cmd' is not a known command." >&2
     echo "    Run '$ProgramName --help' for a list of known commands."
     echo ""

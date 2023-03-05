@@ -28,60 +28,69 @@ Usage: octo.sh [command] <option>
 
 Commands:
 
-    -h, --help
-         Display this help message.
+     help
+          Display this help message.
 
-    -c, --connect
-         Connect to printer via serial port.
+     connect
+          Connect to printer via serial port.
 
-    -d, --disconnect
-         Disconnect from printer.
+     disconnect
+          Disconnect from printer.
 
-    -C, --connection
-         Display connection status.
+     connection
+          Display connection status.
 
-    -p, --psu <on | off | toggle | reboot | status>
-         Manage PSU state.
-             Must have PSU Control plugin installed
-             & configured in your Octoprint instance.
-               https://plugins.octoprint.org/plugins/psucontrol
-         Each of these PSU options can be sent as their own commands.
-             e.g. --on, --off, --reboot, etc.
+     psu <on | off | toggle | reboot | status>
+          Manage PSU state.
+              Must have PSU Control plugin installed
+              & configured in your Octoprint instance.
+                https://plugins.octoprint.org/plugins/psucontrol
+          Each of these PSU options can be sent as their own commands.
+              e.g. on, off, reboot, etc.
 
-    -g, --gcode <'G-code Commands' | help>
-         Send G-code commands (semicolon separated) to printer.
-         <help>: Display link to Marlin G-code documentation.
+     gcode <'G-code Commands' | help>
+          Send G-code commands (semicolon separated) to printer.
+          <help>: Display link to Marlin G-code documentation.
 
-    -s, --select
-         Select a file for printing from local storage.
+     select
+          Select a file for printing from local storage.
 
-    -u, --unselect
-         Unselect currently selected file.
+     unselect
+          Unselect currently selected file.
 
-    -j, --job
-         View current job status.
+     job
+          View current job status.
 
-    -S, --start
-         Start print job.
+     start
+          Start currently selected print job.
 
-    -C, --cancel
-         Abort current print job.
+     cancel
+          Abort currently running print job.
 
-    -P, --pause
-         Pause current print job.
+     pause
+          Pause currently running print job.
 
-    -R, --resume
-         Resume paused print job.
+     resume
+          Resume currently paused print job.
+    
+     time
+          Display elapsed/remaining time for current print job
 
-    -b, --bed <off | [value in °C] | status>
-         Set heated bed temperature.
+     bed <off | [value in °C] | status>
+          Set heated bed temperature.
 
-    -t, --tool, --hotend <off | [value in °C] | status>
-         Set tool/hotend temperature.
+     tool <off | [value in °C] | status>
+          Set tool/hotend temperature.
 
-    -f, --fan <off | [0-100]% | [0-255]>
-         Set cooling fan speed.
+     fan <off | [0-100]% | [0-255]>
+          Set cooling fan speed.
 
-    -ph, --preheat <'profile name' | add | remove | list>
-         Preheat bed/tool using values in the given preheat profile.
+     preheat <'profile name' | add | remove | list>
+          Preheat bed/tool using values in the given preheat profile.
+
+     sleep <time in minutes>
+          Display countdown timer for <minutes>.
+          Useful for delaying subsequent commands.
+              e.g. octo.sh sleep 10 && octo.sh start
+                   (sleep for 10 minutes, then start print job)
 ```
