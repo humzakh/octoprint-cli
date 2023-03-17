@@ -74,7 +74,7 @@ Commands:
           Resume currently paused print job.
     
      time
-          Display elapsed/remaining time for current print job
+          Display elapsed/remaining time for current print job.
 
      bed <off | [value in °C] | status>
           Set heated bed temperature.
