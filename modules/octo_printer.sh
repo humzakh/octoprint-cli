@@ -148,6 +148,16 @@ function octo__tool() {
       octo__gcode --silent "M104 S0"
       echo "done"
       ;;
+    "load")
+      echo "Loading filament..."
+      octo__gcode --silent "M701"
+      exit 0
+      ;;
+    "unload")
+      echo "Unloading filament..."
+      octo__gcode --silent "M702"
+      exit 0
+      ;;
     "" | "status") ;;
     *)
       echo "Error: Invalid argument." >&2
