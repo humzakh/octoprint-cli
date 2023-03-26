@@ -15,7 +15,7 @@ for module in $(dirname "$0")/modules/octo_*.sh; do source $module; done
 
 cmd="$1"
 case "$cmd" in
-  "" | "-h" | "--help" | "help") octo__help ;;
+  "" | "-h" | "--help" | "help")                 octo__help ;;
   "--sleep" | "sleep")                    shift; octo__sleep $@ ;;
   "-g" | "--gcode" | "gcode")             shift; octo__gcode "$@" ;;
   "-j" | "--job"  | "job")                shift; octo__job $@ ;;
@@ -40,11 +40,7 @@ case "$cmd" in
   "--time" | "time")                             octo__job "time" ;;
   "--select" | "select")                         octo__file "select" ;;
   "--unselect" | "unselect")                     octo__file "unselect" ;;
-  "--cool" | "--cooldown" | "cool" | "cooldown")
-    octo__bed 0
-    octo__tool 0
-    octo__fan 0
-    ;;
+  "--cool" | "--cooldown" | "cool" | "cooldown") octo__bed 0 ; octo__tool 0 ; octo__fan 0 ;;
   *)
     echo "Error: invalid syntax or '$cmd' is not a known command." >&2
     echo "    Run '$ProgramName --help' for a list of known commands."
