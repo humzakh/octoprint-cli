@@ -209,7 +209,7 @@ function octo__fan() {
     "off")
       echo -n "Setting fan speed to 0%..."
       sleep 0.5
-      octo__gcode "__octo__" "M106 S0"
+      octo__gcode --silent "M106 S0"
       echo "done"
       ;;
     *)
